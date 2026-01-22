@@ -64,9 +64,12 @@ class StorageService {
   private seeding = false;
 
   async getAllPosts(): Promise<Post[]> {
+    console.log("[Storage] getAllPosts called");
     try {
       const q = query(collection(firestore, COLLECTION_NAME));
+      console.log("[Storage] Executing Firestore query...");
       const querySnapshot = await getDocs(q);
+      console.log(`[Storage] Query returned. Docs found: ${querySnapshot.size}`);
 
       const posts: Post[] = [];
       querySnapshot.forEach((doc) => {
@@ -75,65 +78,75 @@ class StorageService {
 
       // If DB is empty and we haven't tried seeding yet
       if (posts.length === 0 && !this.seeding) {
-        console.log("Database empty. Starting one-time seed...");
+        console.log("[Storage] Database empty. Starting one-time seed...");
         this.seeding = true;
         // Don't await this blocking the UI, but ensure we don't trigger it again
-        this.seedData().catch(err => console.error("Seeding failed", err));
+        this.seedData().catch(err => console.error("[Storage] Seeding failed", err));
+        console.log("[Storage] Returning INITIAL_POSTS as fallback immediately");
         return INITIAL_POSTS;
       }
 
+      console.log(`[Storage] returning ${posts.length} posts`);
       return posts;
     } catch (error) {
-      console.error("Error getting posts:", error);
+      console.error("[Storage] Error getting posts:", error);
       return [];
     }
   }
 
   async getPublishedPosts(): Promise<Post[]> {
+    console.log("[Storage] getPublishedPosts called");
     try {
       const q = query(
         collection(firestore, COLLECTION_NAME),
         where("published", "==", true)
       );
       const querySnapshot = await getDocs(q);
-
+      
       const posts: Post[] = [];
       querySnapshot.forEach((doc) => {
         posts.push(doc.data() as Post);
       });
+      console.log(`[Storage] Found ${posts.length} published posts`);
 
       // Client-side sort if composed index is missing
       return posts.sort((a, b) =>
         new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
       );
     } catch (error) {
-      console.error("Error getting published posts:", error);
+      console.error("[Storage] Error getting published posts:", error);
       return [];
     }
   }
 
   async getPostBySlug(slug: string): Promise<Post | undefined> {
+    console.log(`[Storage] getPostBySlug: ${slug}`);
     try {
       const q = query(collection(firestore, COLLECTION_NAME), where("slug", "==", slug));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
+        console.log("[Storage] Post found");
         return querySnapshot.docs[0].data() as Post;
       }
+      console.log("[Storage] Post not found");
       return undefined;
     } catch (error) {
-      console.error("Error getting post by slug:", error);
+      console.error("[Storage] Error getting post by slug:", error);
       return undefined;
     }
   }
 
   async savePost(post: Post): Promise<Post> {
+    console.log(`[Storage] savePost called. ID: ${post.id}, Title: ${post.title}`);
+    console.log(`[Storage] Payload size check - Image length: ${post.featuredImage?.length || 0} chars`);
     try {
       // Use post.id as the document ID
       await setDoc(doc(firestore, COLLECTION_NAME, post.id), post);
+      console.log("[Storage] Post saved successfully to Firestore");
       return post;
     } catch (error) {
-      console.error("Error saving post:", error);
+      console.error("[Storage] Error saving post:", error);
       throw error;
     }
   }

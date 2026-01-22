@@ -9,14 +9,21 @@ export const Dashboard: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   
   useEffect(() => {
+    console.log("[Dashboard] Mounted. calling loadPosts...");
     loadPosts();
   }, []);
 
   const loadPosts = async () => {
-    const data = await db.getAllPosts();
-    // Sort by created date descending
-    data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    setPosts(data);
+    console.log("[Dashboard] loadPosts invoked");
+    try {
+      const data = await db.getAllPosts();
+      console.log(`[Dashboard] loadPosts received ${data.length} items`);
+      // Sort by created date descending
+      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setPosts(data);
+    } catch (err) {
+      console.error("[Dashboard] loadPosts failed", err);
+    }
   };
 
   const handleDelete = async (id: string) => {
