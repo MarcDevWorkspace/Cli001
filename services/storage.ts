@@ -61,6 +61,7 @@ Il est impératif de repenser la formation continue des avocats pour faire face 
 ];
 
 class StorageService {
+  private seeding = false;
 
   async getAllPosts(): Promise<Post[]> {
     try {
@@ -72,10 +73,12 @@ class StorageService {
         posts.push(doc.data() as Post);
       });
 
-      // If DB is empty, seed it (optional feature for convenience)
-      if (posts.length === 0) {
-        // We won't await this to keep UI fast, but in prod you might want to.
-        this.seedData();
+      // If DB is empty and we haven't tried seeding yet
+      if (posts.length === 0 && !this.seeding) {
+        console.log("Database empty. Starting one-time seed...");
+        this.seeding = true;
+        // Don't await this blocking the UI, but ensure we don't trigger it again
+        this.seedData().catch(err => console.error("Seeding failed", err));
         return INITIAL_POSTS;
       }
 

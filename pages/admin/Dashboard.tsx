@@ -7,15 +7,10 @@ import { Plus, Edit2, Trash2, Eye, LogOut } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
-  const navigate = useNavigate();
-
+  
   useEffect(() => {
-    if (!authService.isAuthenticated()) {
-      navigate('/admin');
-      return;
-    }
     loadPosts();
-  }, [navigate]);
+  }, []);
 
   const loadPosts = async () => {
     const data = await db.getAllPosts();
