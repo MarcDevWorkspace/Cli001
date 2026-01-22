@@ -7,13 +7,9 @@ import {
 import { auth } from './firebase';
 
 export const authService = {
-  login: async (password: string): Promise<boolean> => {
+  login: async (email: string, password: string): Promise<boolean> => {
     try {
-      // In a real app, you'd ask for email AND password.
-      // For this migration keeping the UI simple, we'll hardcode the email
-      // checking only the password provided by the user.
-      const adminEmail = 'admin@bertrandgerbier.com';
-      await signInWithEmailAndPassword(auth, adminEmail, password);
+      await signInWithEmailAndPassword(auth, email, password);
       return true;
     } catch (error) {
       console.error("Login failed", error);
