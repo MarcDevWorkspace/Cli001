@@ -1,27 +1,44 @@
-// In a real serverless setup, this would be a secure HTTP-only cookie session check.
-// For this client-side demo, we use simple localStorage + hardcoded check.
-
-const AUTH_KEY = 'bertrand_admin_session';
-const MOCK_PASSWORD = 'admin'; // Hardcoded for demo purposes
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User
+} from 'firebase/auth';
+import { auth } from './firebase';
 
 export const authService = {
   login: async (password: string): Promise<boolean> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (password === MOCK_PASSWORD) {
-      localStorage.setItem(AUTH_KEY, 'true');
+    try {
+      // In a real app, you'd ask for email AND password.
+      // For this migration keeping the UI simple, we'll hardcode the email
+      // checking only the password provided by the user.
+      const adminEmail = 'admin@bertrandgerbier.com';
+      await signInWithEmailAndPassword(auth, adminEmail, password);
       return true;
+    } catch (error) {
+      console.error("Login failed", error);
+      return false;
     }
-    return false;
   },
 
-  logout: () => {
-    localStorage.removeItem(AUTH_KEY);
-    window.location.reload();
+  logout: async () => {
+    try {
+      await signOut(auth);
+      window.location.reload();
+    } catch (error) {
+      console.error("Logout failed", error);
+    }
   },
 
+  // Note: This is now a synchronous check of state, but Firebase Auth is async.
+  // Ideally, the app should subscribe to onAuthStateChanged.
+  // For now, checking currentUser works if the auth state has initialized.
   isAuthenticated: (): boolean => {
-    return localStorage.getItem(AUTH_KEY) === 'true';
+    return !!auth.currentUser;
+  },
+
+  // Helper to subscribe to auth changes
+  onAuthChange: (callback: (user: User | null) => void) => {
+    return onAuthStateChanged(auth, callback);
   }
 };

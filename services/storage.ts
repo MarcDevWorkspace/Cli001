@@ -1,6 +1,20 @@
+import {
+  collection,
+  getDocs,
+  getDoc,
+  doc,
+  setDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy
+} from 'firebase/firestore';
+import { db as firestore } from './firebase';
 import { Post } from '../types';
 
-// Initial seed data based on the user's prompt context
+const COLLECTION_NAME = 'posts';
+
+// Fallback seed data (only used if DB is empty)
 const INITIAL_POSTS: Post[] = [
   {
     id: '1',
@@ -43,78 +57,99 @@ Il est impératif de repenser la formation continue des avocats pour faire face 
     publishedAt: '2023-11-15T10:00:00Z',
     createdAt: '2023-11-15T10:00:00Z',
     tags: ['Droit', 'Port-au-Prince', 'Opinion']
-  },
-  {
-    id: '3',
-    slug: 'draft-etude-sociologique',
-    title: '[BROUILLON] Étude sociologique en cours',
-    excerpt: 'Notes préliminaires sur les dynamiques de pouvoir locales.',
-    content: 'Contenu à venir. Notes confidentielles.',
-    author: 'Bertrand Gerbier',
-    published: false,
-    publishedAt: null,
-    createdAt: '2024-05-20T09:30:00Z',
-    tags: ['Recherche', 'Sociologie']
   }
 ];
 
-const STORAGE_KEY = 'bertrand_gerbier_posts';
-
-// This class simulates an async database API
-// In production, methods would fetch('/api/posts') etc.
 class StorageService {
-  constructor() {
-    this.init();
-  }
-
-  private init() {
-    if (typeof window !== 'undefined') {
-      const existing = localStorage.getItem(STORAGE_KEY);
-      if (!existing) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_POSTS));
-      }
-    }
-  }
 
   async getAllPosts(): Promise<Post[]> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    try {
+      const q = query(collection(firestore, COLLECTION_NAME));
+      const querySnapshot = await getDocs(q);
+
+      const posts: Post[] = [];
+      querySnapshot.forEach((doc) => {
+        posts.push(doc.data() as Post);
+      });
+
+      // If DB is empty, seed it (optional feature for convenience)
+      if (posts.length === 0) {
+        // We won't await this to keep UI fast, but in prod you might want to.
+        this.seedData();
+        return INITIAL_POSTS;
+      }
+
+      return posts;
+    } catch (error) {
+      console.error("Error getting posts:", error);
+      return [];
+    }
   }
 
   async getPublishedPosts(): Promise<Post[]> {
-    const posts = await this.getAllPosts();
-    return posts.filter(p => p.published).sort((a, b) => 
-      new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
-    );
+    try {
+      const q = query(
+        collection(firestore, COLLECTION_NAME),
+        where("published", "==", true)
+      );
+      const querySnapshot = await getDocs(q);
+
+      const posts: Post[] = [];
+      querySnapshot.forEach((doc) => {
+        posts.push(doc.data() as Post);
+      });
+
+      // Client-side sort if composed index is missing
+      return posts.sort((a, b) =>
+        new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
+      );
+    } catch (error) {
+      console.error("Error getting published posts:", error);
+      return [];
+    }
   }
 
   async getPostBySlug(slug: string): Promise<Post | undefined> {
-    const posts = await this.getAllPosts();
-    return posts.find(p => p.slug === slug);
+    try {
+      const q = query(collection(firestore, COLLECTION_NAME), where("slug", "==", slug));
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        return querySnapshot.docs[0].data() as Post;
+      }
+      return undefined;
+    } catch (error) {
+      console.error("Error getting post by slug:", error);
+      return undefined;
+    }
   }
 
   async savePost(post: Post): Promise<Post> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const posts = await this.getAllPosts();
-    const index = posts.findIndex(p => p.id === post.id);
-    
-    if (index >= 0) {
-      posts[index] = post;
-    } else {
-      posts.push(post);
+    try {
+      // Use post.id as the document ID
+      await setDoc(doc(firestore, COLLECTION_NAME, post.id), post);
+      return post;
+    } catch (error) {
+      console.error("Error saving post:", error);
+      throw error;
     }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
-    return post;
   }
 
   async deletePost(id: string): Promise<boolean> {
-    const posts = await this.getAllPosts();
-    const filtered = posts.filter(p => p.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    return true;
+    try {
+      await deleteDoc(doc(firestore, COLLECTION_NAME, id));
+      return true;
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      return false;
+    }
+  }
+
+  private async seedData() {
+    console.log("Seeding database...");
+    for (const post of INITIAL_POSTS) {
+      await this.savePost(post);
+    }
   }
 }
 

@@ -6,7 +6,14 @@ import { authService } from '../services/auth';
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const location = useLocation();
-  const isAdmin = authService.isAuthenticated();
+  const [isAdmin, setIsAdmin] = React.useState(authService.isAuthenticated());
+
+  React.useEffect(() => {
+    const unsubscribe = authService.onAuthChange((user) => {
+      setIsAdmin(!!user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -15,9 +22,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   };
 
   const navLinks = [
-    { path: '/', label: 'Accueil', icon: <Home className="w-4 h-4 mr-2"/> },
-    { path: '/bio', label: 'Parcours', icon: <User className="w-4 h-4 mr-2"/> },
-    { path: '/publications', label: 'Publications', icon: <BookOpen className="w-4 h-4 mr-2"/> },
+    { path: '/', label: 'Accueil', icon: <Home className="w-4 h-4 mr-2" /> },
+    { path: '/bio', label: 'Parcours', icon: <User className="w-4 h-4 mr-2" /> },
+    { path: '/publications', label: 'Publications', icon: <BookOpen className="w-4 h-4 mr-2" /> },
   ];
 
   return (
@@ -37,17 +44,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {/* Desktop Nav */}
             <nav className="hidden md:flex space-x-8 items-center">
               {navLinks.map((link) => (
-                <Link 
-                  key={link.path} 
-                  to={link.path} 
+                <Link
+                  key={link.path}
+                  to={link.path}
                   className={`flex items-center px-1 pt-1 text-sm font-medium transition-colors ${isActive(link.path)}`}
                 >
                   {link.label}
                 </Link>
               ))}
               {isAdmin && (
-                <Link 
-                  to="/admin" 
+                <Link
+                  to="/admin"
                   className="ml-4 px-4 py-2 border border-brand-primary text-brand-primary rounded-full text-xs hover:bg-brand-primary hover:text-white transition-all"
                 >
                   Administration
@@ -107,7 +114,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <div>
               <h3 className="text-xl font-serif font-semibold mb-4 text-white">Bertrand Gerbier</h3>
               <p className="text-gray-400 text-sm leading-relaxed max-w-xs">
-                Avocat au Barreau de Port-au-Prince, Magistrat de formation et chercheur en anthropologie. 
+                Avocat au Barreau de Port-au-Prince, Magistrat de formation et chercheur en anthropologie.
                 Dédié à l'étude des intersections entre droit formel et réalités sociales.
               </p>
             </div>
