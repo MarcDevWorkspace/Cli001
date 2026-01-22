@@ -8,7 +8,7 @@ import { Save, ArrowLeft, Image as ImageIcon, X } from 'lucide-react';
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [title, setTitle] = useState('');
   const [excerpt, setExcerpt] = useState('');
   const [content, setContent] = useState('');
@@ -22,7 +22,7 @@ export const Editor: React.FC = () => {
       navigate('/admin');
       return;
     }
-    
+
     if (id) {
       loadPost(id);
     }
@@ -41,14 +41,29 @@ export const Editor: React.FC = () => {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFeaturedImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        setLoading(true);
+        // Dynamic import to avoid issues if storage isn't fully configured yet, 
+        // though we just added it to firebase.ts
+        const { storage } = await import('../../services/firebase');
+        const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+
+        // Create a unique reference: images/<timestamp>_<filename>
+        const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
+
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+
+        setFeaturedImage(downloadURL);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("Failed to upload image. Check console for details.");
+        setLoading(false);
+      }
     }
   };
 
@@ -94,7 +109,7 @@ export const Editor: React.FC = () => {
           </div>
 
           <form onSubmit={handleSave} className="p-6 space-y-6">
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 space-y-4">
                 <div>
@@ -108,10 +123,10 @@ export const Editor: React.FC = () => {
                     placeholder="Titre de l'article"
                   />
                 </div>
-                
+
                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Extrait (Résumé)</label>
-                   <textarea
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Extrait (Résumé)</label>
+                  <textarea
                     required
                     value={excerpt}
                     onChange={(e) => setExcerpt(e.target.value)}
@@ -122,34 +137,34 @@ export const Editor: React.FC = () => {
                 </div>
 
                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Image de couverture</label>
-                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors text-center">
-                     {featuredImage ? (
-                       <div className="relative">
-                         <img src={featuredImage} alt="Cover preview" className="w-full h-48 object-cover rounded" />
-                         <button 
-                           type="button"
-                           onClick={() => setFeaturedImage('')}
-                           className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700"
-                         >
-                           <X className="w-4 h-4" />
-                         </button>
-                       </div>
-                     ) : (
-                       <label className="cursor-pointer flex flex-col items-center justify-center h-48">
-                         <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
-                         <span className="text-sm text-gray-500">Cliquez pour ajouter une image</span>
-                         <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                       </label>
-                     )}
-                   </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Image de couverture</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors text-center">
+                    {featuredImage ? (
+                      <div className="relative">
+                        <img src={featuredImage} alt="Cover preview" className="w-full h-48 object-cover rounded" />
+                        <button
+                          type="button"
+                          onClick={() => setFeaturedImage('')}
+                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer flex flex-col items-center justify-center h-48">
+                        <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
+                        <span className="text-sm text-gray-500">Cliquez pour ajouter une image</span>
+                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-4 bg-gray-50 p-4 rounded border border-gray-100 h-fit">
                 <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Tags (séparés par des virgules)</label>
-                   <input
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (séparés par des virgules)</label>
+                  <input
                     type="text"
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
@@ -157,7 +172,7 @@ export const Editor: React.FC = () => {
                     placeholder="Droit, Société,..."
                   />
                 </div>
-                
+
                 <div className="flex items-center pt-2">
                   <input
                     id="published"
@@ -187,7 +202,7 @@ export const Editor: React.FC = () => {
             </div>
 
             <div className="flex justify-end pt-4 border-t border-gray-100">
-               <button
+              <button
                 type="submit"
                 disabled={loading}
                 className="flex items-center bg-brand-primary hover:bg-blue-900 text-white font-bold py-3 px-8 rounded shadow-lg transition-transform hover:-translate-y-0.5"
