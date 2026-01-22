@@ -140,9 +140,19 @@ class StorageService {
   async savePost(post: Post): Promise<Post> {
     console.log(`[Storage] savePost called. ID: ${post.id}, Title: ${post.title}`);
     console.log(`[Storage] Payload size check - Image length: ${post.featuredImage?.length || 0} chars`);
+    
     try {
-      // Use post.id as the document ID
-      await setDoc(doc(firestore, COLLECTION_NAME, post.id), post);
+      // Create a timeout promise
+      const timeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Firestore write timed out after 10s")), 10000);
+      });
+
+      // Race the setDoc against the timeout
+      await Promise.race([
+        setDoc(doc(firestore, COLLECTION_NAME, post.id), post),
+        timeout
+      ]);
+
       console.log("[Storage] Post saved successfully to Firestore");
       return post;
     } catch (error) {
