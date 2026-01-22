@@ -38,7 +38,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <Link to="/" className="font-serif text-2xl font-bold text-brand-dark tracking-tight">
                 Bertrand Gerbier
               </Link>
-              <span className="text-xs uppercase tracking-widest text-brand-accent mt-1">Avocat & Anthropologue</span>
+              <span className="text-xs uppercase tracking-widest text-brand-accent mt-1">Magistrat, Avocat & Anthropologue</span>
             </div>
 
             {/* Desktop Nav */}
