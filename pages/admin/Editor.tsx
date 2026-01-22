@@ -41,27 +41,67 @@ export const Editor: React.FC = () => {
     }
   };
 
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Max width/height to help reduce size initially
+          const MAX_DIMENSION = 1200;
+          if (width > height) {
+            if (width > MAX_DIMENSION) {
+              height *= MAX_DIMENSION / width;
+              width = MAX_DIMENSION;
+            }
+          } else {
+            if (height > MAX_DIMENSION) {
+              width *= MAX_DIMENSION / height;
+              height = MAX_DIMENSION;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Iteratively reduce quality until it fits
+          let quality = 0.9;
+          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+          
+          // Simple heuristic: if > 300KB, reduce quality drastically
+          // Accurate 300KB check: (length * 3/4) - padding = bytes
+          while (dataUrl.length * 0.75 > 300 * 1024 && quality > 0.1) {
+            quality -= 0.1;
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+
+          resolve(dataUrl);
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       try {
         setLoading(true);
-        // Dynamic import to avoid issues if storage isn't fully configured yet, 
-        // though we just added it to firebase.ts
-        const { storage } = await import('../../services/firebase');
-        const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-
-        // Create a unique reference: images/<timestamp>_<filename>
-        const storageRef = ref(storage, `images/${Date.now()}_${file.name}`);
-
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-
-        setFeaturedImage(downloadURL);
+        const compressedBase64 = await compressImage(file);
+        setFeaturedImage(compressedBase64);
         setLoading(false);
       } catch (error) {
-        console.error("Error uploading image:", error);
-        alert("Failed to upload image. Check console for details.");
+        console.error("Error processing image:", error);
+        alert("Failed to process image.");
         setLoading(false);
       }
     }
