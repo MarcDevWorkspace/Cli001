@@ -1,0 +1,24 @@
+export interface Post {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string; // Markdown or HTML content
+  featuredImage?: string; // Base64 string or URL
+  author: string;
+  published: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+  tags: string[];
+}
+
+export interface User {
+  username: string;
+  isAdmin: boolean;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
