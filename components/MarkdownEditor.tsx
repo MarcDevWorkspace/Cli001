@@ -13,7 +13,8 @@ import {
     Quote,
     Code,
     Eye,
-    Edit3
+    Edit3,
+    Columns
 } from 'lucide-react';
 
 interface MarkdownEditorProps {
@@ -29,7 +30,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
+    const [activeTab, setActiveTab] = useState<'edit' | 'preview' | 'split'>('edit');
     const [isUploading, setIsUploading] = useState(false);
 
     // Insert text at cursor position
@@ -44,7 +45,6 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
         const newText = value.substring(0, start) + before + selectedText + after + value.substring(end);
         onChange(newText);
 
-        // Set cursor position after insert
         setTimeout(() => {
             textarea.focus();
             const newCursorPos = start + before.length + selectedText.length;
@@ -54,6 +54,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
     // Compress and insert image
     const compressAndInsertImage = useCallback(async (file: File) => {
+        console.log("Starting image compression for:", file.name);
         setIsUploading(true);
 
         return new Promise<void>((resolve, reject) => {
@@ -95,23 +96,48 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                         dataUrl = canvas.toDataURL('image/jpeg', quality);
                     }
 
-                    // Insert markdown image at cursor
+                    console.log("Image compressed. Final size approx:", Math.round(dataUrl.length * 0.75 / 1024), "KB");
+
+                    // Usage of reference style links
+                    const refId = `img-${Date.now()}`;
                     const altText = file.name.replace(/\.[^/.]+$/, '');
-                    insertAtCursor(`\n![${altText}](${dataUrl})\n`);
+
+                    const textarea = textareaRef.current;
+                    if (textarea) {
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+
+                        const before = value.substring(0, start);
+                        const after = value.substring(end);
+
+                        // Insert reference at cursor and definition at the VERY end
+                        const newText = before + `![${altText}][${refId}]` + after + `\n\n[${refId}]: ${dataUrl}`;
+                        onChange(newText);
+
+                        // Restore cursor
+                        setTimeout(() => {
+                            textarea.focus();
+                            const newCursorPos = start + altText.length + refId.length + 5; // ![alt][ref] length
+                            textarea.setSelectionRange(newCursorPos, newCursorPos);
+                        }, 0);
+                    }
+
                     setIsUploading(false);
                     resolve();
                 };
                 img.onerror = (error) => {
+                    console.error("Image load error:", error);
                     setIsUploading(false);
                     reject(error);
                 };
             };
             reader.onerror = (error) => {
+                console.error("FileReader error:", error);
                 setIsUploading(false);
                 reject(error);
             };
         });
-    }, [insertAtCursor]);
+    }, [value, onChange]);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -123,7 +149,6 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 alert("Échec du traitement de l'image.");
             }
         }
-        // Reset the input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -151,49 +176,65 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
     return (
         <div className="relative group">
-            {/* Toolbar - Sticky */}
-            <div className="sticky top-0 z-40 mb-4 transition-opacity duration-200">
-                <div className="flex items-center gap-0.5 bg-white shadow-sm border border-gray-100 rounded-lg p-1.5 w-fit">
-                    {toolbarButtons.map((btn, index) =>
-                        btn.type === 'separator' ? (
-                            <div key={index} className="w-px h-5 bg-gray-200 mx-1" />
-                        ) : (
-                            <button
-                                key={index}
-                                type="button"
-                                onClick={btn.action}
-                                disabled={btn.loading}
-                                title={btn.title}
-                                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-brand-primary transition-colors disabled:opacity-50"
-                            >
-                                {btn.icon && <btn.icon className="w-4 h-4" />}
-                            </button>
-                        )
-                    )}
-                </div>
+            {/* Toolbar - Full Header */}
+            <div className="sticky top-0 z-40 mb-4 transition-all duration-300">
+                <div className="flex items-center justify-between bg-white shadow-sm border border-gray-100 rounded-lg p-2 w-full">
+                    {/* Tool Buttons */}
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                        {toolbarButtons.map((btn, index) =>
+                            btn.type === 'separator' ? (
+                                <div key={index} className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
+                            ) : (
+                                <button
+                                    key={index}
+                                    type="button"
+                                    onClick={btn.action}
+                                    disabled={btn.loading}
+                                    title={btn.title}
+                                    className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-brand-primary transition-colors disabled:opacity-50 flex-shrink-0"
+                                >
+                                    {btn.icon && <btn.icon className="w-5 h-5" />}
+                                </button>
+                            )
+                        )}
+                    </div>
 
-                {/* View Toggles */}
-                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 ml-4 border border-gray-200">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('edit')}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${activeTab === 'edit'
-                            ? 'bg-white text-brand-primary shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        <Edit3 className="w-3 h-3 inline mr-1.5" />Écrire
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('preview')}
-                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${activeTab === 'preview'
-                            ? 'bg-white text-brand-primary shadow-sm'
-                            : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                    >
-                        <Eye className="w-3 h-3 inline mr-1.5" />Aperçu
-                    </button>
+                    {/* View Toggles - Segmented Control */}
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 ml-4 border border-gray-200 flex-shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('edit')}
+                            title="Éditer"
+                            className={`p-1.5 rounded-md transition-all ${activeTab === 'edit'
+                                ? 'bg-white text-brand-primary shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('split')}
+                            title="Côte à côte"
+                            className={`p-1.5 rounded-md transition-all ${activeTab === 'split'
+                                ? 'bg-white text-brand-primary shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            <Columns className="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('preview')}
+                            title="Aperçu seul"
+                            className={`p-1.5 rounded-md transition-all ${activeTab === 'preview'
+                                ? 'bg-white text-brand-primary shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            <Eye className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -206,30 +247,46 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 className="hidden"
             />
 
-            {/* Editor Content - Seamless */}
+            {/* Editor Content */}
             <div className="min-h-[500px]">
-                {activeTab === 'edit' ? (
-                    <textarea
-                        ref={textareaRef}
-                        value={value}
-                        onChange={(e) => onChange(e.target.value)}
-                        placeholder={placeholder}
-                        className="w-full h-full min-h-[500px] font-serif text-lg text-gray-800 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent leading-relaxed placeholder-gray-300"
-                    />
-                ) : (
-                    <div className="prose prose-lg prose-slate max-w-none text-gray-800">
-                        <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            className="prose prose-lg prose-slate max-w-none"
-                        >
-                            {value}
-                        </ReactMarkdown>
-                    </div>
-                )}
+                <div className={`grid h-full gap-6 ${activeTab === 'split' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+
+                    {/* Editor Pane */}
+                    {(activeTab === 'edit' || activeTab === 'split') && (
+                        <div className="h-full">
+                            <textarea
+                                ref={textareaRef}
+                                value={value}
+                                onChange={(e) => onChange(e.target.value)}
+                                placeholder={placeholder}
+                                className="w-full h-full min-h-[500px] font-serif text-lg text-gray-800 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent leading-relaxed placeholder-gray-300"
+                            />
+                        </div>
+                    )}
+
+                    {/* Preview Pane */}
+                    {(activeTab === 'preview' || activeTab === 'split') && (
+                        <div className={`h-full ${activeTab === 'split' ? 'border-l border-gray-100 pl-6' : ''}`}>
+                            <div className="prose prose-lg prose-slate max-w-none text-gray-800">
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    className="prose prose-lg prose-slate max-w-none"
+                                    components={{
+                                        img: ({ node, ...props }) => (
+                                            <img {...props} className="rounded-lg shadow-sm max-w-full" loading="lazy" />
+                                        )
+                                    }}
+                                >
+                                    {value}
+                                </ReactMarkdown>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Character Count - Floating bottom right */}
-            <div className="fixed bottom-4 right-[340px] text-xs text-gray-300 pointer-events-none">
+            {/* Character Count */}
+            <div className={`fixed bottom-4 text-xs text-gray-300 pointer-events-none transition-all duration-300 ${activeTab === 'split' ? 'right-[50%]' : 'right-[340px]'}`}>
                 {value.length} caractères
             </div>
         </div>
