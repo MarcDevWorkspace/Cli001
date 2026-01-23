@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, initializeFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, memoryLocalCache } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
@@ -16,8 +16,10 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with long polling to avoid WebSocket issues in restrictive networks
+// Initialize Firestore with memory-only cache (no IndexedDB) and long polling
+// This is the "Nuclear" option for connectivity issues
 export const db = initializeFirestore(app, {
+    localCache: memoryLocalCache(),
     experimentalForceLongPolling: true,
 });
 
