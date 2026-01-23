@@ -102,7 +102,7 @@ class StorageService {
         where("published", "==", true)
       );
       const querySnapshot = await getDocs(q);
-      
+
       const posts: Post[] = [];
       querySnapshot.forEach((doc) => {
         posts.push(doc.data() as Post);
@@ -140,23 +140,27 @@ class StorageService {
   async savePost(post: Post): Promise<Post> {
     console.log(`[Storage] savePost called. ID: ${post.id}, Title: ${post.title}`);
     console.log(`[Storage] Payload size check - Image length: ${post.featuredImage?.length || 0} chars`);
-    
-    try {
-      // Create a timeout promise
-      const timeout = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Firestore write timed out after 10s")), 10000);
-      });
 
-      // Race the setDoc against the timeout
-      await Promise.race([
-        setDoc(doc(firestore, COLLECTION_NAME, post.id), post),
-        timeout
-      ]);
+    try {
+      const docRef = doc(firestore, COLLECTION_NAME, post.id);
+      console.log(`[Storage] Writing to Firestore document: ${COLLECTION_NAME}/${post.id}`);
+
+      await setDoc(docRef, post);
 
       console.log("[Storage] Post saved successfully to Firestore");
       return post;
-    } catch (error) {
+    } catch (error: any) {
+      // Provide more detailed error information
       console.error("[Storage] Error saving post:", error);
+      console.error("[Storage] Error code:", error?.code);
+      console.error("[Storage] Error message:", error?.message);
+
+      // Check for common Firestore errors
+      if (error?.code === 'permission-denied') {
+        console.error("[Storage] PERMISSION DENIED - Check Firestore Security Rules in Firebase Console");
+        throw new Error("Permission denied. Please check Firestore security rules allow writes for authenticated users.");
+      }
+
       throw error;
     }
   }
