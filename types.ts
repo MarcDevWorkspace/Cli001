@@ -4,6 +4,8 @@ export interface Post {
   title: string;
   excerpt: string;
   content: string; // Markdown or HTML content
+  contentType?: 'markdown' | 'pdf'; // Default: 'markdown'
+  pdfData?: string; // Base64 PDF data for PDF articles
   featuredImage?: string; // Base64 string or URL
   author: string;
   published: boolean;

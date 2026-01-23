@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { Post } from '../../types';
-import { Save, ArrowLeft, Image as ImageIcon, X, CheckCircle } from 'lucide-react';
+import { Save, ArrowLeft, Image as ImageIcon, X, CheckCircle, FileText, Upload, Eye } from 'lucide-react';
 import { MarkdownEditor } from '../../components/MarkdownEditor';
+import { PDFViewer } from '../../components/PDFViewer';
 
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,10 @@ export const Editor: React.FC = () => {
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // New state for contentType
+  const [contentType, setContentType] = useState<'markdown' | 'pdf'>('markdown');
+  const [pdfData, setPdfData] = useState<string>('');
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -40,6 +45,8 @@ export const Editor: React.FC = () => {
       setFeaturedImage(post.featuredImage || '');
       setTags(post.tags.join(', '));
       setPublished(post.published);
+      setContentType(post.contentType || 'markdown');
+      setPdfData(post.pdfData || '');
     }
   };
 
@@ -105,6 +112,28 @@ export const Editor: React.FC = () => {
     }
   };
 
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert("Veuillez sélectionner un fichier PDF valide.");
+        return;
+      }
+
+      setLoading(true);
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        setPdfData(event.target?.result as string);
+        setLoading(false);
+      };
+      reader.onerror = () => {
+        alert("Erreur lors de la lecture du fichier PDF.");
+        setLoading(false);
+      };
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -120,7 +149,9 @@ export const Editor: React.FC = () => {
       slug,
       title,
       excerpt,
-      content,
+      content: contentType === 'markdown' ? content : '', // Only save content if markdown mode
+      contentType,
+      pdfData: contentType === 'pdf' ? pdfData : undefined, // Only save PDF data if PDF mode
       featuredImage,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       published,
@@ -239,18 +270,97 @@ export const Editor: React.FC = () => {
             </div>
           </div>
 
-          {/* Content Editor Section */}
+          {/* Content Type Toggle */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800">Contenu de l'article</h2>
-              <span className="text-xs text-gray-500">Markdown avec aperçu en direct</span>
+            <div className="flex border-b border-gray-100">
+              <button
+                type="button"
+                onClick={() => setContentType('markdown')}
+                className={`flex-1 py-4 text-center text-sm font-medium transition-colors ${contentType === 'markdown'
+                    ? 'border-b-2 border-brand-primary text-brand-primary bg-blue-50/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className={`w-4 h-4 ${contentType === 'markdown' ? 'opacity-100' : 'opacity-0'}`} />
+                  Écrire un article (Markdown)
+                </div>
+              </button>
+              <div className="w-px bg-gray-100" />
+              <button
+                type="button"
+                onClick={() => setContentType('pdf')}
+                className={`flex-1 py-4 text-center text-sm font-medium transition-colors ${contentType === 'pdf'
+                    ? 'border-b-2 border-brand-primary text-brand-primary bg-blue-50/50'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <CheckCircle className={`w-4 h-4 ${contentType === 'pdf' ? 'opacity-100' : 'opacity-0'}`} />
+                  Importer un PDF
+                </div>
+              </button>
             </div>
+
+            {/* Content Editor Section */}
             <div className="p-6">
-              <MarkdownEditor
-                value={content}
-                onChange={setContent}
-                placeholder="Commencez à écrire votre article ici... Utilisez le bouton image de la barre d'outils pour insérer des images."
-              />
+              {contentType === 'markdown' ? (
+                <MarkdownEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Commencez à écrire votre article ici... Utilisez le bouton image de la barre d'outils pour insérer des images."
+                />
+              ) : (
+                <div className="space-y-6">
+                  {/* PDF Upload */}
+                  {!pdfData ? (
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:bg-gray-50 transition-colors">
+                      <div className="mx-auto w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                        <Upload className="w-8 h-8" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Importer votre document PDF</h3>
+                      <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+                        Le fichier sera converti et intégré directement dans l'article.
+                        Les visiteurs pourront le lire sans le télécharger.
+                      </p>
+                      <label className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-blue-800 focus:outline-none cursor-pointer transition-colors">
+                        Choisir un fichier PDF
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={handlePdfUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-red-500" />
+                          Document PDF importé
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => setPdfData('')}
+                          className="text-sm text-red-600 hover:text-red-800 font-medium hover:underline"
+                        >
+                          Remplacer le fichier
+                        </button>
+                      </div>
+
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 text-xs text-gray-500 flex items-center gap-2">
+                          <Eye className="w-3 h-3" /> Aperçu du lecteur
+                        </div>
+                        <div className="p-4 bg-gray-100">
+                          <PDFViewer data={pdfData} title={title || 'Aperçu'} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
