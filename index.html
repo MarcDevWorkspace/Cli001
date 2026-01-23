@@ -12,39 +12,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     
-    <!-- Tailwind via CDN for simplicity in this specific setup, though postcss is available in package.json -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              brand: {
-                primary: '#1B3B5F', // Deep Blue (Law/Trust)
-                secondary: '#D4AF37', // Gold (Prestige)
-                accent: '#C04000', // Terracotta (Haitian culture ref)
-                cream: '#F9F7F2', // Background
-                dark: '#111827',
-                paper: '#f3f4f6'
-              }
-            },
-            fontFamily: {
-              serif: ['"Playfair Display"', 'serif'],
-              sans: ['Lato', 'sans-serif'],
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.8s ease-out',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
-            }
-          }
-        }
-      }
-    </script>
+    <!-- Tailwind via PostCSS -->
+    <!-- CDN Removed -->
 <link rel="stylesheet" href="/index.css">
 </head>
   <body>

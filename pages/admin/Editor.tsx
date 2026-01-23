@@ -3,9 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { Post } from '../../types';
-import { Save, ArrowLeft, Image as ImageIcon, X, CheckCircle, FileText, Upload, Eye } from 'lucide-react';
+import {
+  Save, ArrowLeft, Image as ImageIcon, X, CheckCircle,
+  FileText, Upload, Eye, Settings, ChevronRight, ChevronDown,
+  Calendar, User
+} from 'lucide-react';
 import { MarkdownEditor } from '../../components/MarkdownEditor';
 import { PDFViewer } from '../../components/PDFViewer';
+import { AutoResizeTextarea } from '../../components/AutoResizeTextarea';
 
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +24,7 @@ export const Editor: React.FC = () => {
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // New state for contentType
   const [contentType, setContentType] = useState<'markdown' | 'pdf'>('markdown');
@@ -149,23 +155,23 @@ export const Editor: React.FC = () => {
       slug,
       title,
       excerpt,
-      content: contentType === 'markdown' ? content : '', // Only save content if markdown mode
+      content: contentType === 'markdown' ? content : '',
       contentType,
-      pdfData: contentType === 'pdf' ? pdfData : undefined, // Only save PDF data if PDF mode
       featuredImage,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       published,
       publishedAt: published ? new Date().toISOString() : null,
       createdAt: id ? (await db.getAllPosts()).find(p => p.id === id)?.createdAt || new Date().toISOString() : new Date().toISOString(),
-      author: 'Bertrand Gerbier'
+      author: 'Bertrand Gerbier',
+      ...(contentType === 'pdf' && pdfData ? { pdfData } : {})
     };
 
     try {
       await db.savePost(postData);
       setSaveSuccess(true);
       setTimeout(() => {
-        navigate('/admin/dashboard');
-      }, 800);
+        setSaveSuccess(false); // Just reset success state, stay on page for continuous editing
+      }, 2000);
     } catch (error) {
       console.error("Error saving post:", error);
       alert("Erreur lors de l'enregistrement.");
@@ -175,187 +181,122 @@ export const Editor: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-brand-primary to-blue-800 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/admin/dashboard')}
-                className="flex items-center text-blue-200 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                <span className="hidden sm:inline">Retour</span>
-              </button>
-              <div className="h-6 w-px bg-blue-400/50" />
-              <h1 className="text-xl font-bold">
-                {id ? 'Modifier la publication' : 'Nouvelle publication'}
-              </h1>
-            </div>
-            <span className="text-blue-200 text-sm font-medium px-3 py-1 bg-blue-900/30 rounded-full">
-              Mode Éditeur
-            </span>
+    <div className="min-h-screen bg-brand-cream flex flex-col font-sans">
+      {/* Top Navigation */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/admin/dashboard')}
+            className="text-gray-500 hover:text-brand-primary transition-colors p-2 rounded-full hover:bg-gray-100"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-gray-400 text-sm hidden sm:inline">{id ? 'Édition' : 'Brouillon'}</span>
+            <span className="text-gray-300 hidden sm:inline">/</span>
+            <span className="font-semibold text-gray-800 truncate max-w-[200px]">{title || 'Sans titre'}</span>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSave} className="space-y-6">
+        <div className="flex items-center gap-3">
+          <span className={`text-xs font-medium px-2 py-1 rounded-full ${saveSuccess ? 'bg-green-100 text-green-700' : 'text-gray-400'}`}>
+            {saveSuccess ? 'Enregistré' : loading ? 'Enregistrement...' : 'Modifications non enregistrées'}
+          </span>
+          <button
+            onClick={handleSave}
+            disabled={loading}
+            className={`flex items-center text-sm font-bold py-2 px-4 rounded-full transition-all ${saveSuccess
+                ? 'bg-green-600 text-white'
+                : 'bg-brand-primary hover:bg-blue-900 text-white shadow-md hover:shadow-lg'
+              }`}
+          >
+            {loading ? (
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : saveSuccess ? (
+              <CheckCircle className="w-4 h-4 mr-2" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            {saveSuccess ? 'Terminé' : 'Enregistrer'}
+          </button>
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={`p-2 rounded-lg transition-colors ${isSidebarOpen ? 'bg-gray-100 text-brand-primary' : 'text-gray-500 hover:bg-gray-100'}`}
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
 
-          {/* Meta Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h2 className="font-semibold text-gray-800">Informations de base</h2>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left: Title & Excerpt */}
-                <div className="lg:col-span-2 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Titre <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition-shadow text-lg"
-                      placeholder="Titre de l'article"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Extrait <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      required
-                      value={excerpt}
-                      onChange={(e) => setExcerpt(e.target.value)}
-                      rows={2}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition-shadow"
-                      placeholder="Bref résumé pour l'aperçu..."
-                    />
-                  </div>
-                </div>
-
-                {/* Right: Featured Image */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Image de couverture</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg hover:border-brand-primary hover:bg-blue-50/50 transition-all text-center h-36">
-                    {featuredImage ? (
-                      <div className="relative h-full">
-                        <img src={featuredImage} alt="Cover preview" className="w-full h-full object-cover rounded-lg" />
-                        <button
-                          type="button"
-                          onClick={() => setFeaturedImage('')}
-                          className="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full hover:bg-red-700 shadow-lg transition-transform hover:scale-110"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer flex flex-col items-center justify-center h-full p-4">
-                        <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-500">Cliquez pour ajouter</span>
-                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                      </label>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Content Type Toggle */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="flex border-b border-gray-100">
-              <button
-                type="button"
-                onClick={() => setContentType('markdown')}
-                className={`flex-1 py-4 text-center text-sm font-medium transition-colors ${contentType === 'markdown'
-                    ? 'border-b-2 border-brand-primary text-brand-primary bg-blue-50/50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <CheckCircle className={`w-4 h-4 ${contentType === 'markdown' ? 'opacity-100' : 'opacity-0'}`} />
-                  Écrire un article (Markdown)
-                </div>
-              </button>
-              <div className="w-px bg-gray-100" />
-              <button
-                type="button"
-                onClick={() => setContentType('pdf')}
-                className={`flex-1 py-4 text-center text-sm font-medium transition-colors ${contentType === 'pdf'
-                    ? 'border-b-2 border-brand-primary text-brand-primary bg-blue-50/50'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <CheckCircle className={`w-4 h-4 ${contentType === 'pdf' ? 'opacity-100' : 'opacity-0'}`} />
-                  Importer un PDF
-                </div>
-              </button>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto bg-brand-cream relative">
+          <div className={`max-w-4xl mx-auto px-6 py-12 transition-all duration-300 ${isSidebarOpen ? 'mr-[320px]' : ''}`}>
+            {/* Title & Excerpt */}
+            <div className="mb-8 group">
+              <AutoResizeTextarea
+                placeholder="Titre de l'article"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-4xl md:text-5xl font-serif font-bold text-brand-dark mb-4 placeholder-gray-300 group-hover:placeholder-gray-400 transition-colors"
+              />
+              <AutoResizeTextarea
+                placeholder="Ajoutez un court extrait ou sous-titre..."
+                value={excerpt}
+                onChange={(e) => setExcerpt(e.target.value)}
+                className="text-xl text-gray-500 font-serif italic placeholder-gray-300 group-hover:placeholder-gray-400 transition-colors"
+              />
             </div>
 
-            {/* Content Editor Section */}
-            <div className="p-6">
+            {/* Content Editor */}
+            <div className="min-h-[500px]">
               {contentType === 'markdown' ? (
                 <MarkdownEditor
                   value={content}
                   onChange={setContent}
-                  placeholder="Commencez à écrire votre article ici... Utilisez le bouton image de la barre d'outils pour insérer des images."
+                  placeholder="Racontez votre histoire..."
                 />
               ) : (
-                <div className="space-y-6">
-                  {/* PDF Upload */}
+                <div className="space-y-6 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
                   {!pdfData ? (
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:bg-gray-50 transition-colors">
-                      <div className="mx-auto w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
-                        <Upload className="w-8 h-8" />
+                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-16 text-center hover:bg-gray-50 transition-colors group cursor-pointer relative">
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={handlePdfUpload}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="mx-auto w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <Upload className="w-10 h-10" />
                       </div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">Importer votre document PDF</h3>
-                      <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                        Le fichier sera converti et intégré directement dans l'article.
-                        Les visiteurs pourront le lire sans le télécharger.
-                      </p>
-                      <label className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-blue-800 focus:outline-none cursor-pointer transition-colors">
-                        Choisir un fichier PDF
-                        <input
-                          type="file"
-                          accept="application/pdf"
-                          onChange={handlePdfUpload}
-                          className="hidden"
-                        />
-                      </label>
+                      <h3 className="text-xl font-medium text-gray-900 mb-2">Importer un PDF</h3>
+                      <p className="text-gray-400">Glissez-déposez ou cliquez pour sélectionner</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-red-500" />
-                          Document PDF importé
-                        </h3>
+                      <div className="flex items-center justify-between p-4 bg-blue-50/50 rounded-lg border border-blue-100">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-red-100 p-2 rounded text-red-600">
+                            <FileText className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900">Document PDF actif</h3>
+                            <p className="text-xs text-gray-500">Prêt à être publié</p>
+                          </div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setPdfData('')}
-                          className="text-sm text-red-600 hover:text-red-800 font-medium hover:underline"
+                          className="text-sm font-medium text-red-600 hover:text-red-700 bg-white px-3 py-1.5 rounded border border-red-200 shadow-sm hover:shadow"
                         >
-                          Remplacer le fichier
+                          Remplacer
                         </button>
                       </div>
-
-                      <div className="border border-gray-200 rounded-lg overflow-hidden">
-                        <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 text-xs text-gray-500 flex items-center gap-2">
-                          <Eye className="w-3 h-3" /> Aperçu du lecteur
-                        </div>
-                        <div className="p-4 bg-gray-100">
-                          <PDFViewer data={pdfData} title={title || 'Aperçu'} />
-                        </div>
+                      <div className="border border-gray-200 rounded-lg overflow-hidden shadow-lg">
+                        <PDFViewer data={pdfData} title={title || 'Aperçu'} />
                       </div>
                     </div>
                   )}
@@ -363,71 +304,108 @@ export const Editor: React.FC = () => {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Footer Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Tags */}
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Tags (séparés par des virgules)</label>
+        {/* Sidebar Settings */}
+        <div className={`fixed right-0 top-[65px] bottom-0 w-[320px] bg-white border-l border-gray-200 shadow-xl transform transition-transform duration-300 overflow-y-auto ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="p-6 space-y-8">
+
+            {/* Status */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Publication</h3>
+              <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
+                <span className={`text-sm font-medium ${published ? 'text-green-600' : 'text-gray-500'}`}>
+                  {published ? 'En ligne' : 'Brouillon'}
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
                   <input
-                    type="text"
-                    value={tags}
-                    onChange={(e) => setTags(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-sm"
-                    placeholder="Droit, Société, ..."
+                    type="checkbox"
+                    checked={published}
+                    onChange={(e) => setPublished(e.target.checked)}
+                    className="sr-only peer"
                   />
-                </div>
-
-                {/* Publish Toggle */}
-                <div className="flex items-center gap-2 pt-4 sm:pt-0">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={published}
-                      onChange={(e) => setPublished(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                    <span className="ml-2 text-sm font-medium text-gray-700">
-                      {published ? 'Publié' : 'Brouillon'}
-                    </span>
-                  </label>
-                </div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                </label>
               </div>
+            </div>
 
-              {/* Save Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className={`flex items-center font-bold py-3 px-8 rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5 ${saveSuccess
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-brand-primary hover:bg-blue-900 text-white'
-                  } disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none`}
-              >
-                {loading ? (
+            {/* Content Type */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Format</h3>
+              <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setContentType('markdown')}
+                  className={`text-sm py-2 px-3 rounded-md transition-all ${contentType === 'markdown' ? 'bg-white shadow text-brand-primary font-bold' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  Article
+                </button>
+                <button
+                  onClick={() => setContentType('pdf')}
+                  className={`text-sm py-2 px-3 rounded-md transition-all ${contentType === 'pdf' ? 'bg-white shadow text-brand-primary font-bold' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  PDF
+                </button>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tags & Catégories</h3>
+              <div className="space-y-2">
+                <label className="text-xs text-gray-500">Mots-clés (séparés par virgules)</label>
+                <textarea
+                  rows={3}
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-shadow resize-none"
+                  placeholder="Droit, Politique, ..."
+                />
+              </div>
+            </div>
+
+            {/* Featured Image */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Image de couverture</h3>
+              <div className="border-2 border-dashed border-gray-200 rounded-lg hover:border-brand-primary hover:bg-blue-50/30 transition-all text-center h-40 relative group cursor-pointer overflow-hidden">
+                {featuredImage ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Enregistrement...
-                  </>
-                ) : saveSuccess ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" /> Enregistré!
+                    <img src={featuredImage} alt="Cover" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setFeaturedImage(''); }}
+                        className="bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-sm"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4 mr-2" /> Enregistrer
+                    <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                      <ImageIcon className="w-8 h-8 mb-2" />
+                      <span className="text-xs">Ajouter une image</span>
+                    </div>
                   </>
                 )}
-              </button>
+              </div>
             </div>
+
+            {/* Meta Info */}
+            <div className="pt-6 border-t border-gray-100 text-xs text-gray-400 space-y-2">
+              <div className="flex items-center justify-between">
+                <span>Auteur</span>
+                <span className="text-gray-600 flex items-center gap-1"><User className="w-3 h-3" /> Bertrand Gerbier</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Date de création</span>
+                <span className="text-gray-600">{new Date().toLocaleDateString()}</span>
+              </div>
+            </div>
+
           </div>
-        </form>
-      </main>
+        </div>
+      </div>
     </div>
   );
 };

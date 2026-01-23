@@ -4,6 +4,7 @@ import { db } from '../services/storage';
 import { Post } from '../types';
 import { ArrowLeft, Calendar, User, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { PDFViewer } from '../components/PDFViewer';
 
 export const PostView: React.FC = () => {
@@ -79,16 +80,8 @@ export const PostView: React.FC = () => {
         ) : (
           <div className="prose prose-lg prose-slate mx-auto bg-white p-8 md:p-12 rounded-xl shadow-sm border border-gray-100 font-serif text-gray-800">
             <ReactMarkdown
-              components={{
-                h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-8 mb-4 text-brand-dark" {...props} />,
-                h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-6 mb-3 text-brand-primary" {...props} />,
-                h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2 text-gray-800" {...props} />,
-                p: ({ node, ...props }) => <p className="mb-4 leading-relaxed" {...props} />,
-                blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-brand-accent pl-4 italic my-4 text-gray-600 bg-gray-50 py-2" {...props} />,
-                ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-4" {...props} />,
-                li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-                a: ({ node, ...props }) => <a className="text-brand-primary underline hover:text-brand-accent" {...props} />,
-              }}
+              remarkPlugins={[remarkGfm]}
+              className="prose prose-lg prose-slate max-w-none"
             >
               {post.content}
             </ReactMarkdown>

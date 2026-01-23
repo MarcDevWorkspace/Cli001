@@ -150,13 +150,13 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     ];
 
     return (
-        <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-            {/* Toolbar */}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-2 py-1.5">
-                <div className="flex items-center gap-0.5">
+        <div className="relative group">
+            {/* Toolbar - Sticky */}
+            <div className="sticky top-0 z-40 mb-4 transition-opacity duration-200">
+                <div className="flex items-center gap-0.5 bg-white shadow-sm border border-gray-100 rounded-lg p-1.5 w-fit">
                     {toolbarButtons.map((btn, index) =>
                         btn.type === 'separator' ? (
-                            <div key={index} className="w-px h-6 bg-gray-300 mx-1" />
+                            <div key={index} className="w-px h-5 bg-gray-200 mx-1" />
                         ) : (
                             <button
                                 key={index}
@@ -164,32 +164,12 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                                 onClick={btn.action}
                                 disabled={btn.loading}
                                 title={btn.title}
-                                className="p-1.5 rounded hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
+                                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-500 hover:text-brand-primary transition-colors disabled:opacity-50"
                             >
                                 {btn.icon && <btn.icon className="w-4 h-4" />}
                             </button>
                         )
                     )}
-                </div>
-
-                {/* Mobile view toggle */}
-                <div className="flex md:hidden items-center gap-1 bg-gray-200 rounded p-0.5">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('edit')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeTab === 'edit' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                            }`}
-                    >
-                        <Edit3 className="w-3 h-3 inline mr-1" />Écrire
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab('preview')}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${activeTab === 'preview' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-                            }`}
-                    >
-                        <Eye className="w-3 h-3 inline mr-1" />Aperçu
-                    </button>
                 </div>
             </div>
 
@@ -202,74 +182,31 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 className="hidden"
             />
 
-            {/* Editor Content */}
-            <div className="flex flex-col md:flex-row min-h-[400px]">
-                {/* Editor Pane */}
-                <div className={`flex-1 ${activeTab !== 'edit' ? 'hidden md:block' : ''}`}>
+            {/* Editor Content - Seamless */}
+            <div className="min-h-[500px]">
+                {activeTab === 'edit' ? (
                     <textarea
                         ref={textareaRef}
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         placeholder={placeholder}
-                        className="w-full h-full min-h-[400px] p-4 font-mono text-sm resize-none border-0 focus:ring-0 focus:outline-none bg-gray-50"
-                        style={{ lineHeight: '1.6' }}
+                        className="w-full h-full min-h-[500px] font-serif text-lg text-gray-800 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent leading-relaxed placeholder-gray-300"
                     />
-                </div>
-
-                {/* Divider */}
-                <div className="hidden md:block w-px bg-gray-200" />
-
-                {/* Preview Pane */}
-                <div className={`flex-1 ${activeTab !== 'preview' ? 'hidden md:block' : ''}`}>
-                    <div className="p-4 prose prose-sm max-w-none h-full overflow-auto bg-white">
-                        {value ? (
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    img: ({ node, ...props }) => (
-                                        <img
-                                            {...props}
-                                            className="max-w-full h-auto rounded-lg shadow-sm my-4"
-                                            loading="lazy"
-                                        />
-                                    ),
-                                    a: ({ node, ...props }) => (
-                                        <a {...props} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" />
-                                    ),
-                                    blockquote: ({ node, ...props }) => (
-                                        <blockquote {...props} className="border-l-4 border-blue-500 pl-4 italic text-gray-700 my-4" />
-                                    ),
-                                    code: ({ node, inline, ...props }: any) => (
-                                        inline
-                                            ? <code {...props} className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono" />
-                                            : <code {...props} className="block bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm font-mono" />
-                                    ),
-                                    table: ({ node, ...props }) => (
-                                        <div className="overflow-x-auto my-4">
-                                            <table {...props} className="min-w-full border-collapse border border-gray-300" />
-                                        </div>
-                                    ),
-                                    th: ({ node, ...props }) => (
-                                        <th {...props} className="border border-gray-300 px-4 py-2 bg-gray-100 font-semibold text-left" />
-                                    ),
-                                    td: ({ node, ...props }) => (
-                                        <td {...props} className="border border-gray-300 px-4 py-2" />
-                                    ),
-                                }}
-                            >
-                                {value}
-                            </ReactMarkdown>
-                        ) : (
-                            <p className="text-gray-400 italic">L'aperçu apparaîtra ici...</p>
-                        )}
+                ) : (
+                    <div className="prose prose-lg prose-slate max-w-none text-gray-800">
+                        <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            className="prose prose-lg prose-slate max-w-none"
+                        >
+                            {value}
+                        </ReactMarkdown>
                     </div>
-                </div>
+                )}
             </div>
 
-            {/* Status bar */}
-            <div className="flex items-center justify-between px-3 py-1.5 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
-                <span>{value.length} caractères</span>
-                <span className="hidden md:inline">Markdown avec support GFM (tableaux, etc.)</span>
+            {/* Character Count - Floating bottom right */}
+            <div className="fixed bottom-4 right-[340px] text-xs text-gray-300 pointer-events-none">
+                {value.length} caractères
             </div>
         </div>
     );
