@@ -171,6 +171,30 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                         )
                     )}
                 </div>
+
+                {/* View Toggles */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 ml-4 border border-gray-200">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('edit')}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${activeTab === 'edit'
+                            ? 'bg-white text-brand-primary shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <Edit3 className="w-3 h-3 inline mr-1.5" />Écrire
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('preview')}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${activeTab === 'preview'
+                            ? 'bg-white text-brand-primary shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <Eye className="w-3 h-3 inline mr-1.5" />Aperçu
+                    </button>
+                </div>
             </div>
 
             {/* Hidden file input for images */}
