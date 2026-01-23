@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { Post } from '../../types';
-import { Save, ArrowLeft, Image as ImageIcon, X } from 'lucide-react';
+import { Save, ArrowLeft, Image as ImageIcon, X, CheckCircle } from 'lucide-react';
+import { MarkdownEditor } from '../../components/MarkdownEditor';
 
 export const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export const Editor: React.FC = () => {
   const [tags, setTags] = useState('');
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!authService.isAuthenticated()) {
@@ -53,7 +55,6 @@ export const Editor: React.FC = () => {
           let width = img.width;
           let height = img.height;
 
-          // Max width/height to help reduce size initially
           const MAX_DIMENSION = 1200;
           if (width > height) {
             if (width > MAX_DIMENSION) {
@@ -72,12 +73,9 @@ export const Editor: React.FC = () => {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
 
-          // Iteratively reduce quality until it fits
           let quality = 0.9;
           let dataUrl = canvas.toDataURL('image/jpeg', quality);
-          
-          // Simple heuristic: if > 300KB, reduce quality drastically
-          // Accurate 300KB check: (length * 3/4) - padding = bytes
+
           while (dataUrl.length * 0.75 > 300 * 1024 && quality > 0.1) {
             quality -= 0.1;
             dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -110,6 +108,7 @@ export const Editor: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setSaveSuccess(false);
 
     const slug = title
       .toLowerCase()
@@ -130,133 +129,195 @@ export const Editor: React.FC = () => {
       author: 'Bertrand Gerbier'
     };
 
-    await db.savePost(postData);
-    setLoading(false);
-    navigate('/admin/dashboard');
+    try {
+      await db.savePost(postData);
+      setSaveSuccess(true);
+      setTimeout(() => {
+        navigate('/admin/dashboard');
+      }, 800);
+    } catch (error) {
+      console.error("Error saving post:", error);
+      alert("Erreur lors de l'enregistrement.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <button onClick={() => navigate('/admin/dashboard')} className="flex items-center text-gray-500 hover:text-gray-900 mb-6">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Retour au tableau de bord
-        </button>
-
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-          <div className="bg-brand-primary px-6 py-4 flex justify-between items-center">
-            <h1 className="text-xl text-white font-bold">{id ? 'Modifier la publication' : 'Nouvelle publication'}</h1>
-            <span className="text-blue-200 text-sm">Mode Éditeur</span>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-brand-primary to-blue-800 text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/admin/dashboard')}
+                className="flex items-center text-blue-200 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                <span className="hidden sm:inline">Retour</span>
+              </button>
+              <div className="h-6 w-px bg-blue-400/50" />
+              <h1 className="text-xl font-bold">
+                {id ? 'Modifier la publication' : 'Nouvelle publication'}
+              </h1>
+            </div>
+            <span className="text-blue-200 text-sm font-medium px-3 py-1 bg-blue-900/30 rounded-full">
+              Mode Éditeur
+            </span>
           </div>
+        </div>
+      </header>
 
-          <form onSubmit={handleSave} className="p-6 space-y-6">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <form onSubmit={handleSave} className="space-y-6">
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
-                  <input
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary outline-none"
-                    placeholder="Titre de l'article"
-                  />
+          {/* Meta Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+              <h2 className="font-semibold text-gray-800">Informations de base</h2>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left: Title & Excerpt */}
+                <div className="lg:col-span-2 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Titre <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition-shadow text-lg"
+                      placeholder="Titre de l'article"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Extrait <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      required
+                      value={excerpt}
+                      onChange={(e) => setExcerpt(e.target.value)}
+                      rows={2}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none transition-shadow"
+                      placeholder="Bref résumé pour l'aperçu..."
+                    />
+                  </div>
                 </div>
 
+                {/* Right: Featured Image */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Extrait (Résumé)</label>
-                  <textarea
-                    required
-                    value={excerpt}
-                    onChange={(e) => setExcerpt(e.target.value)}
-                    rows={2}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary outline-none"
-                    placeholder="Bref résumé pour l'aperçu..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Image de couverture</label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors text-center">
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Image de couverture</label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg hover:border-brand-primary hover:bg-blue-50/50 transition-all text-center h-36">
                     {featuredImage ? (
-                      <div className="relative">
-                        <img src={featuredImage} alt="Cover preview" className="w-full h-48 object-cover rounded" />
+                      <div className="relative h-full">
+                        <img src={featuredImage} alt="Cover preview" className="w-full h-full object-cover rounded-lg" />
                         <button
                           type="button"
                           onClick={() => setFeaturedImage('')}
-                          className="absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full hover:bg-red-700"
+                          className="absolute top-2 right-2 bg-red-600 text-white p-1.5 rounded-full hover:bg-red-700 shadow-lg transition-transform hover:scale-110"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <label className="cursor-pointer flex flex-col items-center justify-center h-48">
+                      <label className="cursor-pointer flex flex-col items-center justify-center h-full p-4">
                         <ImageIcon className="w-8 h-8 text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-500">Cliquez pour ajouter une image</span>
+                        <span className="text-sm text-gray-500">Cliquez pour ajouter</span>
                         <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                       </label>
                     )}
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="space-y-4 bg-gray-50 p-4 rounded border border-gray-100 h-fit">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (séparés par des virgules)</label>
+          {/* Content Editor Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+              <h2 className="font-semibold text-gray-800">Contenu de l'article</h2>
+              <span className="text-xs text-gray-500">Markdown avec aperçu en direct</span>
+            </div>
+            <div className="p-6">
+              <MarkdownEditor
+                value={content}
+                onChange={setContent}
+                placeholder="Commencez à écrire votre article ici... Utilisez le bouton image de la barre d'outils pour insérer des images."
+              />
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Tags */}
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Tags (séparés par des virgules)</label>
                   <input
                     type="text"
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary outline-none text-sm"
-                    placeholder="Droit, Société,..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-sm"
+                    placeholder="Droit, Société, ..."
                   />
                 </div>
 
-                <div className="flex items-center pt-2">
-                  <input
-                    id="published"
-                    type="checkbox"
-                    checked={published}
-                    onChange={(e) => setPublished(e.target.checked)}
-                    className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
-                  />
-                  <label htmlFor="published" className="ml-2 block text-sm text-gray-900">
-                    Publier immédiatement
+                {/* Publish Toggle */}
+                <div className="flex items-center gap-2 pt-4 sm:pt-0">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={published}
+                      onChange={(e) => setPublished(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    <span className="ml-2 text-sm font-medium text-gray-700">
+                      {published ? 'Publié' : 'Brouillon'}
+                    </span>
                   </label>
                 </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contenu (Markdown supporté)</label>
-              <textarea
-                required
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={15}
-                className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-brand-primary outline-none font-mono text-sm bg-gray-50"
-                placeholder="# Introduction..."
-              />
-              <p className="text-xs text-gray-500 mt-2">Utilisez Markdown pour formater le texte.</p>
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-gray-100">
+              {/* Save Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center bg-brand-primary hover:bg-blue-900 text-white font-bold py-3 px-8 rounded shadow-lg transition-transform hover:-translate-y-0.5"
+                className={`flex items-center font-bold py-3 px-8 rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5 ${saveSuccess
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-brand-primary hover:bg-blue-900 text-white'
+                  } disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none`}
               >
-                {loading ? 'Enregistrement...' : (
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Enregistrement...
+                  </>
+                ) : saveSuccess ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" /> Enregistré!
+                  </>
+                ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" /> Enregistrer
                   </>
                 )}
               </button>
             </div>
-          </form>
-        </div>
-      </div>
+          </div>
+        </form>
+      </main>
     </div>
   );
 };
