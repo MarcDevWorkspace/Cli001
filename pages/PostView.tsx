@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { db } from '../services/storage';
 import { Post } from '../types';
@@ -6,6 +6,41 @@ import { ArrowLeft, Calendar, User, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { PDFViewer } from '../components/PDFViewer';
+
+// Constants for image data parsing (must match MarkdownEditor)
+const IMAGE_DATA_DELIMITER = '\n\n<!-- IMAGE_DATA -->\n';
+const IMAGE_PLACEHOLDER_REGEX = /!\[([^\]]*)\]\(image:([a-zA-Z0-9_-]+)\)/g;
+const IMAGE_DATA_ENTRY_REGEX = /^\[image:([a-zA-Z0-9_-]+)\]: (.+)$/gm;
+
+/**
+ * Parses content and transforms image placeholders to data URLs for rendering
+ */
+function prepareContentForRendering(content: string): string {
+  const delimiterIndex = content.indexOf(IMAGE_DATA_DELIMITER);
+
+  if (delimiterIndex === -1) {
+    // No hidden image data section, return content as-is
+    // (might be legacy content with inline base64 or no images)
+    return content;
+  }
+
+  const visibleContent = content.substring(0, delimiterIndex);
+  const dataSection = content.substring(delimiterIndex + IMAGE_DATA_DELIMITER.length);
+
+  // Build image map
+  const imageMap = new Map<string, string>();
+  let match;
+  const regex = new RegExp(IMAGE_DATA_ENTRY_REGEX.source, 'gm');
+  while ((match = regex.exec(dataSection)) !== null) {
+    imageMap.set(match[1], match[2]);
+  }
+
+  // Replace placeholders with data URLs
+  return visibleContent.replace(IMAGE_PLACEHOLDER_REGEX, (fullMatch, alt, id) => {
+    const dataUrl = imageMap.get(id);
+    return dataUrl ? `![${alt}](${dataUrl})` : fullMatch;
+  });
+}
 
 export const PostView: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -20,6 +55,12 @@ export const PostView: React.FC = () => {
     };
     loadPost();
   }, [slug]);
+
+  // Transform content for rendering
+  const preparedContent = useMemo(() => {
+    if (!post?.content) return '';
+    return prepareContentForRendering(post.content);
+  }, [post?.content]);
 
   if (post === undefined) return <div className="min-h-screen bg-brand-cream flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div></div>;
   if (post === null) return (
@@ -83,14 +124,14 @@ export const PostView: React.FC = () => {
               remarkPlugins={[remarkGfm]}
               className="prose prose-lg prose-slate max-w-none"
               urlTransform={(url) => {
-                // Allow data: URLs for inline Base64 images (blocked by default for XSS prevention)
+                // Allow data: URLs for inline Base64 images
                 if (url && url.startsWith('data:')) {
                   return url;
                 }
                 return url;
               }}
             >
-              {post.content}
+              {preparedContent}
             </ReactMarkdown>
           </div>
         )}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -23,6 +23,78 @@ interface MarkdownEditorProps {
     placeholder?: string;
 }
 
+// Delimiter used to separate visible content from hidden image data
+const IMAGE_DATA_DELIMITER = '\n\n<!-- IMAGE_DATA -->\n';
+
+// Regex to match image placeholders: ![alt](image:id)
+const IMAGE_PLACEHOLDER_REGEX = /!\[([^\]]*)\]\(image:([a-zA-Z0-9_-]+)\)/g;
+
+// Regex to match image data entries: [image:id]: data:...
+const IMAGE_DATA_ENTRY_REGEX = /^\[image:([a-zA-Z0-9_-]+)\]: (.+)$/gm;
+
+/**
+ * Extracts the visible content (before delimiter) and the image data map
+ */
+function parseContent(fullContent: string): { visibleContent: string; imageMap: Map<string, string> } {
+    const imageMap = new Map<string, string>();
+
+    const delimiterIndex = fullContent.indexOf(IMAGE_DATA_DELIMITER);
+    if (delimiterIndex === -1) {
+        // No image data section, check for legacy inline base64 images and convert them
+        return { visibleContent: fullContent, imageMap };
+    }
+
+    const visibleContent = fullContent.substring(0, delimiterIndex);
+    const dataSection = fullContent.substring(delimiterIndex + IMAGE_DATA_DELIMITER.length);
+
+    // Parse image data entries
+    let match;
+    const regex = new RegExp(IMAGE_DATA_ENTRY_REGEX.source, 'gm');
+    while ((match = regex.exec(dataSection)) !== null) {
+        const id = match[1];
+        const data = match[2];
+        imageMap.set(id, data);
+    }
+
+    return { visibleContent, imageMap };
+}
+
+/**
+ * Combines visible content and image map back into full content for storage
+ */
+function serializeContent(visibleContent: string, imageMap: Map<string, string>): string {
+    if (imageMap.size === 0) {
+        return visibleContent;
+    }
+
+    let dataSection = '';
+    imageMap.forEach((data, id) => {
+        dataSection += `[image:${id}]: ${data}\n`;
+    });
+
+    return visibleContent + IMAGE_DATA_DELIMITER + dataSection;
+}
+
+/**
+ * Transforms visible content by replacing image placeholders with actual data URLs for rendering
+ */
+function transformForRendering(visibleContent: string, imageMap: Map<string, string>): string {
+    return visibleContent.replace(IMAGE_PLACEHOLDER_REGEX, (match, alt, id) => {
+        const dataUrl = imageMap.get(id);
+        if (dataUrl) {
+            return `![${alt}](${dataUrl})`;
+        }
+        return match; // Keep original if not found
+    });
+}
+
+/**
+ * Generates a short unique ID for images
+ */
+function generateImageId(): string {
+    return 'img_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+}
+
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     value,
     onChange,
@@ -33,28 +105,41 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     const [activeTab, setActiveTab] = useState<'edit' | 'preview' | 'split'>('edit');
     const [isUploading, setIsUploading] = useState(false);
 
+    // Parse the full content into visible content and image map
+    const { visibleContent, imageMap } = useMemo(() => parseContent(value), [value]);
+
+    // Transform content for preview rendering
+    const contentForPreview = useMemo(() => transformForRendering(visibleContent, imageMap), [visibleContent, imageMap]);
+
+    // Handle changes in the visible textarea
+    const handleVisibleContentChange = useCallback((newVisibleContent: string) => {
+        // Re-serialize with the existing image map
+        const fullContent = serializeContent(newVisibleContent, imageMap);
+        onChange(fullContent);
+    }, [imageMap, onChange]);
+
     // Insert text at cursor position
-    const insertAtCursor = useCallback((before: string, after: string = '', placeholder: string = '') => {
+    const insertAtCursor = useCallback((before: string, after: string = '', placeholderText: string = '') => {
         const textarea = textareaRef.current;
         if (!textarea) return;
 
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
-        const selectedText = value.substring(start, end) || placeholder;
+        const selectedText = visibleContent.substring(start, end) || placeholderText;
 
-        const newText = value.substring(0, start) + before + selectedText + after + value.substring(end);
-        onChange(newText);
+        const newVisibleContent = visibleContent.substring(0, start) + before + selectedText + after + visibleContent.substring(end);
+        handleVisibleContentChange(newVisibleContent);
 
         setTimeout(() => {
             textarea.focus();
             const newCursorPos = start + before.length + selectedText.length;
             textarea.setSelectionRange(newCursorPos, newCursorPos);
         }, 0);
-    }, [value, onChange]);
+    }, [visibleContent, handleVisibleContentChange]);
 
     // Compress and insert image
     const compressAndInsertImage = useCallback(async (file: File) => {
-        console.log("Starting image compression for:", file.name);
+        console.log("[MarkdownEditor] Starting image compression for:", file.name);
         setIsUploading(true);
 
         return new Promise<void>((resolve, reject) => {
@@ -96,28 +181,40 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                         dataUrl = canvas.toDataURL('image/jpeg', quality);
                     }
 
-                    console.log("Image compressed. Final size approx:", Math.round(dataUrl.length * 0.75 / 1024), "KB");
+                    console.log("[MarkdownEditor] Image compressed. Final size approx:", Math.round(dataUrl.length * 0.75 / 1024), "KB");
 
-                    // Use inline image syntax for full ReactMarkdown compatibility
+                    // Generate a unique ID for this image
+                    const imageId = generateImageId();
                     const altText = file.name.replace(/\.[^/.]+$/, '');
+
+                    // Add the image data to the map
+                    const newImageMap = new Map(imageMap);
+                    newImageMap.set(imageId, dataUrl);
+
+                    // Create the placeholder markdown
+                    const imagePlaceholder = `![${altText}](image:${imageId})`;
 
                     const textarea = textareaRef.current;
                     if (textarea) {
                         const start = textarea.selectionStart;
                         const end = textarea.selectionEnd;
 
-                        const before = value.substring(0, start);
-                        const after = value.substring(end);
+                        const before = visibleContent.substring(0, start);
+                        const after = visibleContent.substring(end);
 
-                        // Insert inline image markdown: ![alt](dataUrl)
-                        const imageMarkdown = `![${altText}](${dataUrl})`;
-                        const newText = before + imageMarkdown + after;
-                        onChange(newText);
+                        // Insert placeholder in visible content
+                        const newVisibleContent = before + imagePlaceholder + after;
 
-                        // Restore cursor to after the image markdown
+                        // Serialize with updated image map
+                        const fullContent = serializeContent(newVisibleContent, newImageMap);
+                        onChange(fullContent);
+
+                        console.log("[MarkdownEditor] Image inserted with ID:", imageId);
+
+                        // Restore cursor to after the placeholder
                         setTimeout(() => {
                             textarea.focus();
-                            const newCursorPos = start + imageMarkdown.length;
+                            const newCursorPos = start + imagePlaceholder.length;
                             textarea.setSelectionRange(newCursorPos, newCursorPos);
                         }, 0);
                     }
@@ -126,18 +223,18 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                     resolve();
                 };
                 img.onerror = (error) => {
-                    console.error("Image load error:", error);
+                    console.error("[MarkdownEditor] Image load error:", error);
                     setIsUploading(false);
                     reject(error);
                 };
             };
             reader.onerror = (error) => {
-                console.error("FileReader error:", error);
+                console.error("[MarkdownEditor] FileReader error:", error);
                 setIsUploading(false);
                 reject(error);
             };
         });
-    }, [value, onChange]);
+    }, [visibleContent, imageMap, onChange]);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -251,13 +348,13 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             <div className="min-h-[500px]">
                 <div className={`grid h-full gap-6 ${activeTab === 'split' ? 'grid-cols-2' : 'grid-cols-1'}`}>
 
-                    {/* Editor Pane */}
+                    {/* Editor Pane - shows only visible content (no Base64) */}
                     {(activeTab === 'edit' || activeTab === 'split') && (
                         <div className="h-full">
                             <textarea
                                 ref={textareaRef}
-                                value={value}
-                                onChange={(e) => onChange(e.target.value)}
+                                value={visibleContent}
+                                onChange={(e) => handleVisibleContentChange(e.target.value)}
                                 placeholder={placeholder}
                                 className="w-full h-full min-h-[500px] font-serif text-lg text-gray-800 resize-none border-0 focus:ring-0 focus:outline-none bg-transparent leading-relaxed placeholder-gray-300"
                             />
@@ -272,31 +369,19 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                                     remarkPlugins={[remarkGfm]}
                                     className="prose prose-lg prose-slate max-w-none"
                                     urlTransform={(url) => {
-                                        // DIAGNOSTIC: Log URL transformation
-                                        console.log('[MarkdownEditor] urlTransform called with:', url?.substring(0, 100) + (url?.length > 100 ? '...' : ''));
-                                        // Allow data: URLs for inline Base64 images (blocked by default for XSS prevention)
+                                        // Allow data: URLs for inline Base64 images
                                         if (url && url.startsWith('data:')) {
-                                            console.log('[MarkdownEditor] Allowing data: URL');
                                             return url;
                                         }
-                                        // Return other URLs as-is
                                         return url;
                                     }}
                                     components={{
-                                        img: ({ node, ...props }) => {
-                                            // DIAGNOSTIC: Log img props to debug rendering
-                                            console.log('[MarkdownEditor] img component received props:', {
-                                                src: props.src?.substring(0, 100) + (props.src?.length > 100 ? '...' : ''),
-                                                alt: props.alt,
-                                                srcLength: props.src?.length
-                                            });
-                                            return (
-                                                <img {...props} className="rounded-lg shadow-sm max-w-full" loading="lazy" />
-                                            );
-                                        }
+                                        img: ({ node, ...props }) => (
+                                            <img {...props} className="rounded-lg shadow-sm max-w-full" loading="lazy" />
+                                        )
                                     }}
                                 >
-                                    {value}
+                                    {contentForPreview}
                                 </ReactMarkdown>
                             </div>
                         </div>
@@ -304,9 +389,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 </div>
             </div>
 
-            {/* Character Count */}
+            {/* Character Count - shows visible content length */}
             <div className={`fixed bottom-4 text-xs text-gray-300 pointer-events-none transition-all duration-300 ${activeTab === 'split' ? 'right-[50%]' : 'right-[340px]'}`}>
-                {value.length} caractères
+                {visibleContent.length} caractères
             </div>
         </div>
     );
