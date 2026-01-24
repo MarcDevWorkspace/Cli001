@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Maximize2 } from 'lucide-react';
+import { Download, ChevronUp } from 'lucide-react';
 
 // Set up PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -12,21 +12,12 @@ interface PDFViewerProps {
 
 export const PDFViewer: React.FC<PDFViewerProps> = ({ data, title = 'Document' }) => {
     const [numPages, setNumPages] = useState<number>(0);
-    const [pageNumber, setPageNumber] = useState<number>(1);
-    const [scale, setScale] = useState<number>(1.0);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [showScrollTop, setShowScrollTop] = useState(false);
 
     const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
         setNumPages(numPages);
-        setPageNumber(1);
-    };
-
-    const changePage = (offset: number) => {
-        setPageNumber(prevPageNumber => Math.min(Math.max(1, prevPageNumber + offset), numPages));
-    };
-
-    const changeScale = (delta: number) => {
-        setScale(prevScale => Math.min(Math.max(0.5, prevScale + delta), 2.5));
+        setIsLoading(false);
     };
 
     const handleDownload = () => {
@@ -38,98 +29,109 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ data, title = 'Document' }
         document.body.removeChild(link);
     };
 
-    const toggleFullscreen = () => {
-        setIsFullscreen(!isFullscreen);
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const scrollTop = e.currentTarget.scrollTop;
+        setShowScrollTop(scrollTop > 300);
     };
 
+    const scrollToTop = () => {
+        const container = document.getElementById('pdf-scroll-container');
+        container?.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // Generate array of page numbers
+    const pageNumbers = Array.from({ length: numPages }, (_, i) => i + 1);
+
     return (
-        <div className={`bg-gray-100 rounded-lg overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
-            {/* Toolbar */}
-            <div className="flex items-center justify-between bg-gray-800 text-white px-4 py-2">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => changePage(-1)}
-                        disabled={pageNumber <= 1}
-                        className="p-1.5 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Page précédente"
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <span className="text-sm min-w-[80px] text-center">
-                        {pageNumber} / {numPages}
-                    </span>
-                    <button
-                        onClick={() => changePage(1)}
-                        disabled={pageNumber >= numPages}
-                        className="p-1.5 rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Page suivante"
-                    >
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => changeScale(-0.25)}
-                        disabled={scale <= 0.5}
-                        className="p-1.5 rounded hover:bg-gray-700 disabled:opacity-50 transition-colors"
-                        title="Zoom arrière"
-                    >
-                        <ZoomOut className="w-5 h-5" />
-                    </button>
-                    <span className="text-sm min-w-[50px] text-center">{Math.round(scale * 100)}%</span>
-                    <button
-                        onClick={() => changeScale(0.25)}
-                        disabled={scale >= 2.5}
-                        className="p-1.5 rounded hover:bg-gray-700 disabled:opacity-50 transition-colors"
-                        title="Zoom avant"
-                    >
-                        <ZoomIn className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={handleDownload}
-                        className="p-1.5 rounded hover:bg-gray-700 transition-colors"
-                        title="Télécharger"
-                    >
-                        <Download className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={toggleFullscreen}
-                        className="p-1.5 rounded hover:bg-gray-700 transition-colors"
-                        title={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
-                    >
-                        <Maximize2 className="w-5 h-5" />
-                    </button>
-                </div>
+        <div className="relative">
+            {/* Floating Download Button */}
+            <div className="absolute top-4 right-4 z-10">
+                <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm text-gray-700 rounded-full shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 text-sm font-medium border border-gray-100"
+                    title="Télécharger le PDF"
+                >
+                    <Download className="w-4 h-4" />
+                    <span className="hidden sm:inline">Télécharger</span>
+                </button>
             </div>
 
-            {/* PDF Content */}
-            <div className={`overflow-auto bg-gray-200 flex justify-center ${isFullscreen ? 'h-[calc(100vh-48px)]' : 'max-h-[70vh]'}`}>
+            {/* Scroll to Top Button */}
+            {showScrollTop && (
+                <button
+                    onClick={scrollToTop}
+                    className="fixed bottom-8 right-8 z-20 p-3 bg-brand-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in"
+                    title="Retour en haut"
+                >
+                    <ChevronUp className="w-5 h-5" />
+                </button>
+            )}
+
+            {/* PDF Pages Container - Scrollable Stack */}
+            <div
+                id="pdf-scroll-container"
+                className="max-h-[85vh] overflow-y-auto scroll-smooth"
+                onScroll={handleScroll}
+                style={{
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#cbd5e1 transparent'
+                }}
+            >
                 <Document
                     file={data}
                     onLoadSuccess={onDocumentLoadSuccess}
                     loading={
-                        <div className="flex items-center justify-center py-20">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <div className="animate-spin rounded-full h-10 w-10 border-2 border-brand-primary border-t-transparent"></div>
+                            <p className="text-gray-400 text-sm">Chargement du document...</p>
                         </div>
                     }
                     error={
-                        <div className="flex items-center justify-center py-20 text-red-600">
-                            Erreur lors du chargement du PDF
+                        <div className="flex flex-col items-center justify-center py-20 text-red-500 gap-2">
+                            <span className="text-lg">⚠️</span>
+                            <p>Erreur lors du chargement du PDF</p>
                         </div>
                     }
                 >
-                    <Page
-                        pageNumber={pageNumber}
-                        scale={scale}
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                        className="shadow-lg"
-                    />
+                    {/* Render all pages as stacked paper sheets */}
+                    <div className="flex flex-col items-center gap-8 py-8">
+                        {pageNumbers.map((pageNum) => (
+                            <div
+                                key={pageNum}
+                                className="relative group"
+                            >
+                                {/* Paper sheet with elegant shadow */}
+                                <div className="bg-white rounded-sm shadow-[0_4px_20px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_6px_rgba(0,0,0,0.08)] transition-shadow duration-300">
+                                    <Page
+                                        pageNumber={pageNum}
+                                        scale={1.0}
+                                        renderTextLayer={false}
+                                        renderAnnotationLayer={false}
+                                        className="block"
+                                        width={Math.min(700, typeof window !== 'undefined' ? window.innerWidth - 80 : 700)}
+                                    />
+                                </div>
+
+                                {/* Subtle page number indicator */}
+                                <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <span className="text-xs text-gray-400 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-full">
+                                        {pageNum} / {numPages}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </Document>
+
+                {/* End of document indicator */}
+                {!isLoading && numPages > 0 && (
+                    <div className="flex flex-col items-center pb-8 pt-4 gap-3">
+                        <div className="w-16 h-px bg-gray-200"></div>
+                        <p className="text-xs text-gray-400">
+                            Fin du document • {numPages} page{numPages > 1 ? 's' : ''}
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

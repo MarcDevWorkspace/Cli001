@@ -115,7 +115,7 @@ export const PostView: React.FC = () => {
         </header>
 
         {post.contentType === 'pdf' && post.pdfData ? (
-          <div className="mx-auto bg-white p-4 md:p-8 rounded-xl shadow-sm border border-gray-100">
+          <div className="mx-auto max-w-4xl">
             <PDFViewer data={post.pdfData} title={post.title} />
           </div>
         ) : (

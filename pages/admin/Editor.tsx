@@ -206,8 +206,8 @@ export const Editor: React.FC = () => {
             onClick={handleSave}
             disabled={loading}
             className={`flex items-center text-sm font-bold py-2 px-4 rounded-full transition-all ${saveSuccess
-                ? 'bg-green-600 text-white'
-                : 'bg-brand-primary hover:bg-blue-900 text-white shadow-md hover:shadow-lg'
+              ? 'bg-green-600 text-white'
+              : 'bg-brand-primary hover:bg-blue-900 text-white shadow-md hover:shadow-lg'
               }`}
           >
             {loading ? (
@@ -295,7 +295,7 @@ export const Editor: React.FC = () => {
                           Remplacer
                         </button>
                       </div>
-                      <div className="border border-gray-200 rounded-lg overflow-hidden shadow-lg">
+                      <div className="rounded-lg overflow-hidden">
                         <PDFViewer data={pdfData} title={title || 'Aperçu'} />
                       </div>
                     </div>
