@@ -106,6 +106,11 @@ export const PostView: React.FC = () => {
               <Calendar className="w-4 h-4 mr-2" />
               {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : 'Non publié'}
             </span>
+            {post.category && (
+              <span className="flex items-center text-brand-primary bg-brand-primary/10 px-2 py-1 rounded text-xs font-bold uppercase tracking-wider">
+                {post.category}
+              </span>
+            )}
             {post.contentType === 'pdf' && (
               <span className="flex items-center text-red-600 bg-red-50 px-2 py-1 rounded-full text-xs font-medium">
                 <FileText className="w-3 h-3 mr-1" /> PDF

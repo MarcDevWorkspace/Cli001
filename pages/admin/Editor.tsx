@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { Post, Category } from '../../types';
+import { slugify } from '../../utils/text';
 import {
   Save, ArrowLeft, Image as ImageIcon, X, CheckCircle,
   FileText, Upload, Eye, Settings, ChevronRight, ChevronDown,
@@ -76,7 +77,7 @@ export const Editor: React.FC = () => {
     if (!newCategoryName.trim()) return;
 
     // Check if distinct
-    const slug = newCategoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const slug = slugify(newCategoryName);
     if (availableCategories.some(c => c.slug === slug)) {
       alert("Cette catégorie existe déjà.");
       return;
@@ -184,10 +185,9 @@ export const Editor: React.FC = () => {
     setLoading(true);
     setSaveSuccess(false);
 
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+    setSaveSuccess(false);
+
+    const slug = slugify(title);
 
     const postData: Post = {
       id: id || Date.now().toString(),
