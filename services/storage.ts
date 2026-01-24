@@ -10,9 +10,10 @@ import {
   orderBy
 } from 'firebase/firestore';
 import { db as firestore } from './firebase';
-import { Post } from '../types';
+import { Post, Category } from '../types';
 
 const COLLECTION_NAME = 'posts';
+const CATEGORY_COLLECTION_NAME = 'categories';
 
 // Fallback seed data (only used if DB is empty)
 const INITIAL_POSTS: Post[] = [
@@ -172,6 +173,31 @@ class StorageService {
     } catch (error) {
       console.error("Error deleting post:", error);
       return false;
+    }
+  }
+
+  async getAllCategories(): Promise<Category[]> {
+    try {
+      const q = query(collection(firestore, CATEGORY_COLLECTION_NAME), orderBy('name'));
+      const querySnapshot = await getDocs(q);
+      const categories: Category[] = [];
+      querySnapshot.forEach((doc) => {
+        categories.push(doc.data() as Category);
+      });
+      return categories;
+    } catch (error) {
+      console.error("Error getting categories:", error);
+      return [];
+    }
+  }
+
+  async saveCategory(category: Category): Promise<Category> {
+    try {
+      await setDoc(doc(firestore, CATEGORY_COLLECTION_NAME, category.id), category);
+      return category;
+    } catch (error) {
+      console.error("Error saving category:", error);
+      throw error;
     }
   }
 

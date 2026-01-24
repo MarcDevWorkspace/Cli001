@@ -20,6 +20,12 @@ export interface User {
   isAdmin: boolean;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

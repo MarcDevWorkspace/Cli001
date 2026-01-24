@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../services/storage';
 import { authService } from '../../services/auth';
-import { Post } from '../../types';
+import { Post, Category } from '../../types';
 import {
   Save, ArrowLeft, Image as ImageIcon, X, CheckCircle,
   FileText, Upload, Eye, Settings, ChevronRight, ChevronDown,
-  Calendar, User
+  Calendar, User, Plus
 } from 'lucide-react';
 import { MarkdownEditor } from '../../components/MarkdownEditor';
 import { PDFViewer } from '../../components/PDFViewer';
@@ -26,6 +26,11 @@ export const Editor: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Categories
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   // New state for contentType
   const [contentType, setContentType] = useState<'markdown' | 'pdf'>('markdown');
@@ -56,6 +61,38 @@ export const Editor: React.FC = () => {
       setContentType(post.contentType || 'markdown');
       setPdfData(post.pdfData || '');
     }
+  };
+
+  const loadCategories = async () => {
+    const cats = await db.getAllCategories();
+    setAvailableCategories(cats);
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    // Check if distinct
+    const slug = newCategoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    if (availableCategories.some(c => c.slug === slug)) {
+      alert("Cette catégorie existe déjà.");
+      return;
+    }
+
+    const newCat: Category = {
+      id: Date.now().toString(),
+      name: newCategoryName.trim(),
+      slug
+    };
+
+    await db.saveCategory(newCat);
+    await loadCategories(); // Refresh list
+    setCategory(newCat.name); // Select it
+    setNewCategoryName('');
+    setIsCreatingCategory(false);
   };
 
   const compressImage = (file: File): Promise<string> => {
@@ -357,13 +394,50 @@ export const Editor: React.FC = () => {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs text-gray-500">Catégorie</label>
-                  <input
-                    type="text"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-shadow"
-                    placeholder="Juridique, Société..."
-                  />
+                  {isCreatingCategory ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-white border border-brand-primary rounded-lg text-sm focus:outline-none"
+                        placeholder="Nouvelle catégorie..."
+                        autoFocus
+                      />
+                      <button
+                        onClick={handleCreateCategory}
+                        className="px-3 py-2 bg-brand-primary text-white rounded-lg text-xs hover:bg-blue-900"
+                      >
+                        OK
+                      </button>
+                      <button
+                        onClick={() => setIsCreatingCategory(false)}
+                        className="px-2 py-2 text-gray-500 hover:text-gray-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-shadow appearance-none cursor-pointer"
+                      >
+                        <option value="">Sélectionner...</option>
+                        {availableCategories.map(cat => (
+                          <option key={cat.id} value={cat.name}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setIsCreatingCategory(true)}
+                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors border border-gray-200"
+                        title="Créer une catégorie"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-gray-500">Mots-clés (séparés par virgules)</label>
