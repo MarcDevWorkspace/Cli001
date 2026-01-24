@@ -98,8 +98,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
                     console.log("Image compressed. Final size approx:", Math.round(dataUrl.length * 0.75 / 1024), "KB");
 
-                    // Usage of reference style links
-                    const refId = `img-${Date.now()}`;
+                    // Use inline image syntax for full ReactMarkdown compatibility
                     const altText = file.name.replace(/\.[^/.]+$/, '');
 
                     const textarea = textareaRef.current;
@@ -110,14 +109,15 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                         const before = value.substring(0, start);
                         const after = value.substring(end);
 
-                        // Insert reference at cursor and definition at the VERY end
-                        const newText = before + `![${altText}][${refId}]` + after + `\n\n[${refId}]: ${dataUrl}`;
+                        // Insert inline image markdown: ![alt](dataUrl)
+                        const imageMarkdown = `![${altText}](${dataUrl})`;
+                        const newText = before + imageMarkdown + after;
                         onChange(newText);
 
-                        // Restore cursor
+                        // Restore cursor to after the image markdown
                         setTimeout(() => {
                             textarea.focus();
-                            const newCursorPos = start + altText.length + refId.length + 5; // ![alt][ref] length
+                            const newCursorPos = start + imageMarkdown.length;
                             textarea.setSelectionRange(newCursorPos, newCursorPos);
                         }, 0);
                     }
