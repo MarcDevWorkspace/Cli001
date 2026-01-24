@@ -82,6 +82,13 @@ export const PostView: React.FC = () => {
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               className="prose prose-lg prose-slate max-w-none"
+              urlTransform={(url) => {
+                // Allow data: URLs for inline Base64 images (blocked by default for XSS prevention)
+                if (url && url.startsWith('data:')) {
+                  return url;
+                }
+                return url;
+              }}
             >
               {post.content}
             </ReactMarkdown>

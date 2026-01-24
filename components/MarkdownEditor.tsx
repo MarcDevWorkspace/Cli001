@@ -271,10 +271,29 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     className="prose prose-lg prose-slate max-w-none"
+                                    urlTransform={(url) => {
+                                        // DIAGNOSTIC: Log URL transformation
+                                        console.log('[MarkdownEditor] urlTransform called with:', url?.substring(0, 100) + (url?.length > 100 ? '...' : ''));
+                                        // Allow data: URLs for inline Base64 images (blocked by default for XSS prevention)
+                                        if (url && url.startsWith('data:')) {
+                                            console.log('[MarkdownEditor] Allowing data: URL');
+                                            return url;
+                                        }
+                                        // Return other URLs as-is
+                                        return url;
+                                    }}
                                     components={{
-                                        img: ({ node, ...props }) => (
-                                            <img {...props} className="rounded-lg shadow-sm max-w-full" loading="lazy" />
-                                        )
+                                        img: ({ node, ...props }) => {
+                                            // DIAGNOSTIC: Log img props to debug rendering
+                                            console.log('[MarkdownEditor] img component received props:', {
+                                                src: props.src?.substring(0, 100) + (props.src?.length > 100 ? '...' : ''),
+                                                alt: props.alt,
+                                                srcLength: props.src?.length
+                                            });
+                                            return (
+                                                <img {...props} className="rounded-lg shadow-sm max-w-full" loading="lazy" />
+                                            );
+                                        }
                                     }}
                                 >
                                     {value}
