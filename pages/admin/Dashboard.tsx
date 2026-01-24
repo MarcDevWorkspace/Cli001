@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { db } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { Post } from '../../types';
-import { Plus, Edit2, Trash2, Eye, LogOut, Calendar, Search, FileText } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye, LogOut, Calendar, Search, FileText, Home, User, BookOpen } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -59,6 +59,20 @@ export const Dashboard: React.FC = () => {
             </div>
             <span className="font-serif font-bold text-xl tracking-wide text-gray-900">Bertrand Gerbier</span>
           </div>
+
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-6">
+            <Link to="/" className="text-sm font-medium text-gray-500 hover:text-brand-primary transition-colors flex items-center gap-1">
+              <Home className="w-4 h-4" /> Accueil
+            </Link>
+            <Link to="/bio" className="text-sm font-medium text-gray-500 hover:text-brand-primary transition-colors flex items-center gap-1">
+              <User className="w-4 h-4" /> Parcours
+            </Link>
+            <Link to="/publications" className="text-sm font-medium text-gray-500 hover:text-brand-primary transition-colors flex items-center gap-1">
+              <BookOpen className="w-4 h-4" /> Publications
+            </Link>
+          </div>
+
           <div className="flex gap-4 items-center">
             <button
               onClick={handleLogout}

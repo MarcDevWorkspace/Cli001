@@ -21,6 +21,7 @@ export const Editor: React.FC = () => {
   const [content, setContent] = useState('');
   const [featuredImage, setFeaturedImage] = useState('');
   const [tags, setTags] = useState('');
+  const [category, setCategory] = useState('');
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -50,6 +51,7 @@ export const Editor: React.FC = () => {
       setContent(post.content);
       setFeaturedImage(post.featuredImage || '');
       setTags(post.tags.join(', '));
+      setCategory(post.category || '');
       setPublished(post.published);
       setContentType(post.contentType || 'markdown');
       setPdfData(post.pdfData || '');
@@ -159,6 +161,7 @@ export const Editor: React.FC = () => {
       contentType,
       featuredImage,
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      category,
       published,
       publishedAt: published ? new Date().toISOString() : null,
       createdAt: id ? (await db.getAllPosts()).find(p => p.id === id)?.createdAt || new Date().toISOString() : new Date().toISOString(),
@@ -351,15 +354,27 @@ export const Editor: React.FC = () => {
             {/* Tags */}
             <div className="space-y-3">
               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Tags & Catégories</h3>
-              <div className="space-y-2">
-                <label className="text-xs text-gray-500">Mots-clés (séparés par virgules)</label>
-                <textarea
-                  rows={3}
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-shadow resize-none"
-                  placeholder="Droit, Politique, ..."
-                />
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500">Catégorie</label>
+                  <input
+                    type="text"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-shadow"
+                    placeholder="Juridique, Société..."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-gray-500">Mots-clés (séparés par virgules)</label>
+                  <textarea
+                    rows={3}
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-shadow resize-none"
+                    placeholder="Droit, Politique, ..."
+                  />
+                </div>
               </div>
             </div>
 

@@ -12,6 +12,7 @@ export interface Post {
   publishedAt: string | null;
   createdAt: string;
   tags: string[];
+  category?: string;
 }
 
 export interface User {
