@@ -25,11 +25,11 @@ export const Home: React.FC = () => {
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1589829085413-56de8ae18c73?q=80&w=2070&auto=format&fit=crop"
-            alt="Palais de Justice"
-            className="w-full h-full object-cover opacity-40 mix-blend-overlay"
+            src="https://images.pexels.com/photos/6077326/pexels-photo-6077326.jpeg?auto=compress&cs=tinysrgb&w=2070"
+            alt="Justice et Droit"
+            className="w-full h-full object-cover opacity-60 mix-blend-luminosity"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-dark via-brand-dark/90 to-brand-primary/40"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-dark via-brand-dark/80 to-transparent"></div>
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20">
