@@ -149,8 +149,8 @@ export const Publications: React.FC = () => {
                                 className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
-                                <BookOpen className="w-10 h-10 opacity-20" />
+                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                                <BookOpen className="w-12 h-12 text-white/10" />
                               </div>
                             )}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>

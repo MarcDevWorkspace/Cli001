@@ -24,6 +24,7 @@ export const Editor: React.FC = () => {
   const [tags, setTags] = useState('');
   const [category, setCategory] = useState('');
   const [published, setPublished] = useState(false);
+  const [publicationDate, setPublicationDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -59,6 +60,9 @@ export const Editor: React.FC = () => {
       setTags(post.tags.join(', '));
       setCategory(post.category || '');
       setPublished(post.published);
+      if (post.publishedAt) {
+        setPublicationDate(new Date(post.publishedAt).toISOString().split('T')[0]);
+      }
       setContentType(post.contentType || 'markdown');
       setPdfData(post.pdfData || '');
     }
@@ -200,7 +204,7 @@ export const Editor: React.FC = () => {
       tags: tags.split(',').map(t => t.trim()).filter(Boolean),
       category,
       published,
-      publishedAt: published ? new Date().toISOString() : null,
+      publishedAt: published ? new Date(publicationDate).toISOString() : null,
       createdAt: id ? (await db.getAllPosts()).find(p => p.id === id)?.createdAt || new Date().toISOString() : new Date().toISOString(),
       author: 'Bertrand Gerbier',
       ...(contentType === 'pdf' && pdfData ? { pdfData } : {})
@@ -367,6 +371,18 @@ export const Editor: React.FC = () => {
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                 </label>
               </div>
+
+              {published && (
+                <div className="mt-2">
+                  <label className="text-xs text-gray-500 mb-1 block">Date de publication</label>
+                  <input
+                    type="date"
+                    value={publicationDate}
+                    onChange={(e) => setPublicationDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-brand-primary outline-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Content Type */}
