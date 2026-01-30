@@ -66,7 +66,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <div className="flex items-center md:hidden">
               <button
                 onClick={toggleMenu}
-                className="text-gray-500 hover:text-gray-900 focus:outline-none p-2"
+                className="text-brand-dark hover:text-brand-primary focus:outline-none p-2 z-50 relative"
+                aria-label="Toggle menu"
               >
                 {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
@@ -74,32 +75,59 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
         </div>
 
-        {/* Mobile Nav */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white border-b border-gray-100 animate-fade-in">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:text-brand-primary hover:bg-gray-50"
-                >
-                  {link.label}
-                </Link>
-              ))}
+        {/* Mobile Nav Drawer & Backdrop */}
+        <div className={`fixed inset-0 z-40 md:hidden transition-opacity duration-300 ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setIsMenuOpen(false)}
+          ></div>
+
+          {/* Drawer Panel */}
+          <div className={`absolute right-0 top-0 bottom-0 w-[80%] max-w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-out flex flex-col ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className="h-20 flex items-center justify-end px-4 border-b border-gray-100">
+              {/* Space for the close button which is fixed in the header but relative here visually */}
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-6 px-6 space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Navigation</h3>
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`flex items-center px-4 py-3 rounded-xl text-lg font-medium transition-all ${location.pathname === link.path
+                        ? "bg-brand-primary/10 text-brand-primary"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-brand-dark"
+                      }`}
+                  >
+                    {link.icon}
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+
               {isAdmin && (
-                <Link
-                  to="/admin"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center px-3 py-3 rounded-md text-base font-medium text-brand-primary bg-blue-50"
-                >
-                  <ShieldCheck className="w-4 h-4 mr-2" /> Administration
-                </Link>
+                <div className="pt-6 border-t border-gray-100">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Administration</h3>
+                  <Link
+                    to="/admin"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center px-4 py-3 rounded-xl text-lg font-medium text-brand-primary bg-blue-50/50 hover:bg-blue-50"
+                  >
+                    <ShieldCheck className="w-5 h-5 mr-3" />
+                    Table de bord
+                  </Link>
+                </div>
               )}
             </div>
+
+            <div className="p-6 bg-gray-50 border-t border-gray-100 text-center">
+              <p className="text-xs text-gray-400">© {new Date().getFullYear()} Bertrand Gerbier</p>
+            </div>
           </div>
-        )}
+        </div>
       </header>
 
       {/* Main Content */}
