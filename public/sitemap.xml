@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Static Pages -->
+  <url>
+    <loc>https://bertrand-gerbier.vercel.app/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://bertrand-gerbier.vercel.app/bio</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bertrand-gerbier.vercel.app/publications</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- 
+    NOTE: For dynamic article pages (e.g., /post/article-slug), 
+    you should add them here manually or use a build-time script.
+    Example:
+    <url>
+      <loc>https://bertrand-gerbier.vercel.app/post/my-article-slug</loc>
+      <lastmod>2026-01-31</lastmod>
+      <changefreq>monthly</changefreq>
+      <priority>0.7</priority>
+    </url>
+  -->
+</urlset>
