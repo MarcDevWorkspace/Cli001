@@ -78,11 +78,11 @@ export const PostView: React.FC = () => {
         </Link>
 
         {post.featuredImage && (
-          <div className="mb-10 rounded-xl overflow-hidden shadow-md">
+          <div className="mb-10 rounded-xl overflow-hidden shadow-md aspect-video md:aspect-[21/9]">
             <img
               src={post.featuredImage}
               alt={post.title}
-              className="w-full h-64 md:h-96 object-cover"
+              className="w-full h-full object-cover"
             />
           </div>
         )}

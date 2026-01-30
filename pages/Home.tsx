@@ -21,7 +21,7 @@ export const Home: React.FC = () => {
     <div className="animate-fade-in font-sans text-gray-800">
 
       {/* Hero Section */}
-      <section className="relative min-h-[85vh] flex items-center bg-brand-dark text-white overflow-hidden">
+      <section className="relative min-h-[70vh] md:min-h-[85vh] flex items-center bg-brand-dark text-white overflow-hidden">
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0">
           <img
@@ -32,18 +32,18 @@ export const Home: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-brand-dark via-brand-dark/80 to-transparent"></div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-12 md:py-20">
           <div className="max-w-3xl">
             <div className="inline-block mb-6 px-3 py-1 bg-brand-accent/20 border border-brand-accent/30 rounded-full text-brand-accent text-sm font-semibold tracking-wider uppercase backdrop-blur-sm">
               Portail Officiel
             </div>
-            <h1 className="text-5xl md:text-7xl font-serif font-bold leading-tight mb-8 tracking-tight">
+            <h1 className="text-4xl md:text-7xl font-serif font-bold leading-tight mb-8 tracking-tight">
               Droit, Justice & <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-accent to-orange-200">
                 Réalités Sociales
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 font-light mb-10 leading-relaxed max-w-2xl border-l-4 border-brand-accent pl-6">
+            <p className="text-lg md:text-2xl text-gray-300 font-light mb-10 leading-relaxed max-w-2xl border-l-4 border-brand-accent pl-6">
               Le carrefour intellectuel de Bertrand Gerbier. Une approche anthropologique de la magistrature et de la pratique du droit en Haïti.
             </p>
             <div className="flex flex-col sm:flex-row gap-5">
@@ -81,14 +81,14 @@ export const Home: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {loading ? (
               [1, 2, 3].map(i => (
-                <div key={i} className="h-96 bg-gray-100 rounded-2xl animate-pulse"></div>
+                <div key={i} className="aspect-video bg-gray-100 rounded-2xl animate-pulse"></div>
               ))
             ) : (
               latestPosts.map(post => (
                 <Link to={`/post/${post.slug}`} key={post.id} className="group block h-full">
                   <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 h-full flex flex-col border border-gray-100/50 hover:border-brand-primary/20 transform hover:-translate-y-2">
                     {/* Image */}
-                    <div className="relative h-56 overflow-hidden">
+                    <div className="relative aspect-video overflow-hidden">
                       {post.featuredImage ? (
                         <img
                           src={post.featuredImage}

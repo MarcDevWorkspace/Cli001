@@ -84,6 +84,24 @@ export const Publications: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Mobile Category Navigation - Horizontal Scroll */}
+        <div className="lg:hidden mb-8 overflow-x-auto no-scrollbar -mx-4 px-4 py-2 border-b border-gray-200">
+          <div className="flex space-x-2 min-w-max pb-2">
+            {displayableCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => scrollToCategory(cat.name)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === cat.name
+                  ? 'bg-brand-primary text-white'
+                  : 'bg-white text-gray-600 border border-gray-200'
+                  }`}
+              >
+                {cat.name} ({categorizedPosts[cat.name]?.length})
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-12">
 
           {/* Sidebar Navigation - Sticky on Desktop */}
@@ -125,7 +143,7 @@ export const Publications: React.FC = () => {
 
                     {/* Category Header */}
                     <div className="flex items-end justify-between border-b border-gray-200 pb-4 mb-8">
-                      <h2 className="text-3xl font-serif font-bold text-gray-900">
+                      <h2 className="text-2xl md:text-3xl font-serif font-bold text-gray-900">
                         {cat.name}
                       </h2>
                       <span className="text-sm font-medium text-gray-500">
@@ -134,14 +152,14 @@ export const Publications: React.FC = () => {
                     </div>
 
                     {/* Articles Grid */}
-                    <div className="grid md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {categorizedPosts[cat.name]?.map((post) => (
                         <article
                           key={post.id}
                           className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col group h-full"
                         >
                           {/* Image */}
-                          <div className="relative h-48 overflow-hidden bg-gray-100">
+                          <div className="relative aspect-video overflow-hidden bg-gray-100">
                             {post.featuredImage ? (
                               <img
                                 src={post.featuredImage}
